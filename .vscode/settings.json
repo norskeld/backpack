@@ -1,0 +1,15 @@
+{
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "editor.rulers": [100],
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  },
+  "json.schemas": [
+    {
+      "fileMatch": ["/.prettierrc", "/.prettierrc.json"],
+      "url": "http://json.schemastore.org/prettierrc"
+    }
+  ]
+}
