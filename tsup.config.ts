@@ -1,5 +1,5 @@
-import isCI from 'is-ci'
 import { defineConfig, type Options } from 'tsup'
+import isCI from 'is-ci'
 
 const entry = 'src/index.ts'
 

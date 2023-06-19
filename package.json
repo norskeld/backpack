@@ -1,7 +1,7 @@
 {
-  "name": "@nrsk/serpent",
+  "name": "@nrsk/backpack",
   "version": "1.0.0",
-  "description": "Yet another TypeScript library starter with conventional goodies and automatic semantic releases.",
+  "description": "MessagePack implementation with back-referencing.",
   "sideEffects": false,
   "type": "module",
   "main": "./index.cjs",
@@ -9,9 +9,9 @@
   "types": "./index.d.ts",
   "exports": {
     ".": {
+      "types": "./index.d.ts",
       "import": "./index.js",
-      "require": "./index.cjs",
-      "types": "./index.d.ts"
+      "require": "./index.cjs"
     }
   },
   "files": [
@@ -38,19 +38,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/norskeld/serpent.git"
+    "url": "git+https://github.com/norskeld/backpack.git"
   },
   "keywords": [
-    "starter",
-    "library",
     "typescript",
-    "jest",
-    "eslint",
-    "prettier",
-    "husky",
-    "lint-staged",
-    "commitlint",
-    "semantic-release"
+    "messagepack",
+    "back-referencing",
+    "serialization"
   ],
   "author": {
     "name": "Vladislav Mamon",
@@ -58,9 +52,9 @@
   },
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/norskeld/serpent/issues"
+    "url": "https://github.com/norskeld/backpack/issues"
   },
-  "homepage": "https://github.com/norskeld/serpent#readme",
+  "homepage": "https://github.com/norskeld/backpack#readme",
   "devDependencies": {
     "@commitlint/cli": "^17.6.5",
     "@nrsk/config-conventional": "^1.0.0",
