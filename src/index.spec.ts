@@ -1,17 +1,45 @@
 import { describe, it, expect } from 'vitest'
 
-import { identity } from './index'
+import { serialize, deserialize } from './index'
 
-describe('index.ts', () => {
-  it('given a primitive, should return the same primitive', async () => {
-    expect(await identity('string')).toBe('string')
-    expect(await identity(1986)).toBe(1986)
-    expect(await identity(true)).toBe(true)
-    expect(await identity(undefined)).toBe(undefined)
+describe('serialize/deserialize', () => {
+  function backpack(input: unknown) {
+    const serialized = serialize(input)
+    const deserialized = deserialize(serialized)
+
+    expect(deserialized).toStrictEqual(input)
+  }
+
+  it('string', () => {
+    backpack('hello')
+    backpack('привет')
   })
 
-  it('given an object, should return the same object', async () => {
-    const value = { foo: 'bar' }
-    expect(await identity(value)).toBe(value)
+  it('number', () => {
+    backpack(0)
+    backpack(42)
+    backpack(4.2)
+    backpack(-300)
+  })
+
+  it('boolean', () => {
+    backpack(true)
+    backpack(false)
+  })
+
+  it('null', () => {
+    backpack(null)
+  })
+
+  it('array', () => {
+    backpack([])
+    backpack([42, 69])
+    backpack(['hello', 'мир'])
+  })
+
+  it('object', () => {
+    backpack({ hello: 'world' })
+    backpack({ message: ['hello', 'world'] })
+    backpack({ compact: true, schema: 0 })
   })
 })
