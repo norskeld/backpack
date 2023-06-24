@@ -1,6 +1,6 @@
 import type { ExtensionCodec } from './codec'
+import { Extension, Type } from './constants'
 import { DataReader } from './rw'
-import { Type } from './constants'
 
 export interface DeserializerOptions {
   extensionCodec?: ExtensionCodec
@@ -10,11 +10,13 @@ export class Deserializer {
   private readonly reader: DataReader
   private readonly textCodec: TextDecoder
   private readonly extensionCodec?: ExtensionCodec
+  private readonly refs: Map<number, string>
 
   constructor(reader: DataReader, { extensionCodec }: DeserializerOptions = {}) {
     this.reader = reader
     this.textCodec = new TextDecoder()
     this.extensionCodec = extensionCodec
+    this.refs = new Map()
   }
 
   decode(): unknown {
@@ -91,17 +93,30 @@ export class Deserializer {
     }
   }
 
-  private readString(length: number): string {
-    const list = this.reader.readRange(length)
+  decodeHeader(): void {
+    let size = this.reader.readU16()
 
-    for (let index = 0; index < list.length; ++index) {
-      // If going beyond ASCII, then we need to decode.
-      if (list[index] > 127) {
-        return this.textCodec.decode(list)
+    while (size > 0) {
+      const ref = this.reader.readU16()
+      const length = this.reader.readU16()
+      const bytes = this.reader.readRange(length)
+
+      this.refs.set(ref, this.textCodec.decode(bytes))
+
+      --size
+    }
+  }
+
+  private readString(length: number): string {
+    const bytes = this.reader.readRange(length)
+
+    for (const byte of bytes) {
+      if (byte > 127) {
+        return this.textCodec.decode(bytes)
       }
     }
 
-    return String.fromCharCode(...list)
+    return String.fromCharCode(...bytes)
   }
 
   private readArray(length: number): unknown[] {
@@ -129,10 +144,18 @@ export class Deserializer {
     return map
   }
 
-  private readExt(length: number): unknown {
-    const extType = this.reader.readU8()
-    const data = this.reader.readRange(length)
+  private readRef(ref: number): string {
+    return this.refs.get(ref)!
+  }
 
-    return this.extensionCodec?.decode(extType, data)
+  private readExt(length: number): unknown {
+    const extType = this.reader.readI8()
+
+    // prettier-ignore
+    switch (extType) {
+      case Extension.Ref8: return this.readRef(this.reader.readU8())
+      case Extension.Ref16: return this.readRef(this.reader.readU16())
+      default: return this.extensionCodec?.decode(extType, this.reader.readRange(length))
+    }
   }
 }
