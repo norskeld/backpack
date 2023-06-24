@@ -60,3 +60,10 @@ export const enum Type {
   FixExt8 = 0xd7,
   FixExt16 = 0xd8
 }
+
+export const enum Extension {
+  Date = -1,
+
+  Ref8 = -2,
+  Ref16 = -3
+}

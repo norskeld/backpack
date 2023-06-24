@@ -1,6 +1,6 @@
 import type { ExtensionCodec } from './codec'
+import { Extension, Type } from './constants'
 import { DataWriter } from './rw'
-import { Type } from './constants'
 
 export interface SerializerOptions {
   extensionCodec?: ExtensionCodec
@@ -10,11 +10,13 @@ export class Serializer {
   private readonly writer: DataWriter
   private readonly textCodec: TextEncoder
   private readonly extensionCodec?: ExtensionCodec
+  private readonly refs: Map<string, number>
 
   constructor(writer: DataWriter, { extensionCodec }: SerializerOptions = {}) {
     this.writer = writer
     this.textCodec = new TextEncoder()
     this.extensionCodec = extensionCodec
+    this.refs = new Map()
   }
 
   encode(data: unknown): void {
@@ -40,6 +42,15 @@ export class Serializer {
 
   takeBytes(): Uint8Array {
     return this.writer.takeBytes()
+  }
+
+  encodeHeader(): void {
+    this.writer.writeU16(this.refs.size)
+
+    for (const [key, ref] of this.refs.entries()) {
+      const encoded = this.textCodec.encode(key)
+      this.writer.writeU16(ref).writeU16(encoded.length).writeBytes(encoded)
+    }
   }
 
   private writeNull(): void {
@@ -96,18 +107,39 @@ export class Serializer {
     const encoded = this.textCodec.encode(s)
     const length = encoded.length
 
-    // Type: fixstr (up to 31 bytes)
-    if (length <= 31) this.writer.writeU8(Type.FixStr | length)
-    // Type: str + length (u8)
-    else if (length <= 255) this.writer.writeU8(Type.Str8).writeU8(length)
-    // Type: str + length (u16)
-    else if (length <= 65535) this.writer.writeU8(Type.Str16).writeU16(length)
-    // Type: str + length (u32)
-    else if (length <= 4294967295) this.writer.writeU8(Type.Str32).writeU32(length)
-    // Otherwise throwing...
-    else throw new Error('String is too long')
+    // NOTE: Somehow with these constraints it produces smaller outputs.
+    if (length >= 4 && length <= 16) {
+      this.writeRef(s)
+    } else {
+      // Type: fixstr (up to 31 bytes)
+      if (length <= 31) this.writer.writeU8(Type.FixStr | length)
+      // Type: str + length (u8)
+      else if (length <= 255) this.writer.writeU8(Type.Str8).writeU8(length)
+      // Type: str + length (u16)
+      else if (length <= 65535) this.writer.writeU8(Type.Str16).writeU16(length)
+      // Type: str + length (u32)
+      else if (length <= 4294967295) this.writer.writeU8(Type.Str32).writeU32(length)
+      // Otherwise throwing...
+      else throw new Error('String is too long')
 
-    this.writer.writeBytes(encoded)
+      this.writer.writeBytes(encoded)
+    }
+  }
+
+  private writeRef(key: string): void {
+    let ref: number
+
+    if (this.refs.has(key)) {
+      ref = this.refs.get(key)!
+    } else {
+      ref = this.refs.size + 1
+      this.refs.set(key, ref)
+    }
+
+    // Type: fixext 1 + extension ref 8 + ref 8
+    if (ref <= 255) this.writer.writeU8(Type.FixExt1).writeI8(Extension.Ref8).writeU8(ref)
+    // Type: fixext 2 + extension ref 16 + ref 16
+    else this.writer.writeU8(Type.FixExt2).writeI8(Extension.Ref16).writeU16(ref)
   }
 
   private writeBinary(data: Uint8Array): void {
