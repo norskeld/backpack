@@ -1,5 +1,6 @@
 import type { ExtensionCodec } from './codec'
-import { Extension, Type } from './constants'
+import { Extension, Format } from './formats'
+import { DeserializationError } from './errors'
 import { DataReader } from './rw'
 
 export interface DeserializerOptions {
@@ -22,72 +23,72 @@ export class Deserializer {
   decode(): unknown {
     const type = this.reader.readBuffer()
 
-    // Type: positive fixint
+    // Format: positive fixint
     if (type <= 127) return type
-    // Type: negative fixint
+    // Format: negative fixint
     else if ((type & 0xe0) === 0xe0) return type - 256
-    // Type: fixstr
-    else if ((type & 0xe0) === Type.FixStr) return this.readString(type & 0x1f)
-    // Type: fixarray
-    else if ((type & 0xf0) === Type.FixArray) return this.readArray(type & 0xf)
-    // Type: fixmap
-    else if ((type & 0xf0) === Type.FixMap) return this.readObject(type & 0xf)
+    // Format: fixstr
+    else if ((type & 0xe0) === Format.FixStr) return this.readString(type & 0x1f)
+    // Format: fixarray
+    else if ((type & 0xf0) === Format.FixArray) return this.readArray(type & 0xf)
+    // Format: fixmap
+    else if ((type & 0xf0) === Format.FixMap) return this.readObject(type & 0xf)
 
     // prettier-ignore
     switch (type) {
       // Null.
-      case Type.Nil: return null
+      case Format.Nil: return null
 
       // Booleans.
-      case Type.False: return false
-      case Type.True: return true
+      case Format.False: return false
+      case Format.True: return true
 
       // Unsigned integers.
-      case Type.Uint8: return this.reader.readU8()
-      case Type.Uint16: return this.reader.readU16()
-      case Type.Uint32: return this.reader.readU32()
-      case Type.Uint64: return this.reader.readU64()
+      case Format.Uint8: return this.reader.readU8()
+      case Format.Uint16: return this.reader.readU16()
+      case Format.Uint32: return this.reader.readU32()
+      case Format.Uint64: return this.reader.readU64()
 
       // Signed integers.
-      case Type.Int8: return this.reader.readI8()
-      case Type.Int16: return this.reader.readI16()
-      case Type.Int32: return this.reader.readI32()
-      case Type.Int64: return this.reader.readI64()
+      case Format.Int8: return this.reader.readI8()
+      case Format.Int16: return this.reader.readI16()
+      case Format.Int32: return this.reader.readI32()
+      case Format.Int64: return this.reader.readI64()
 
       // Floats.
-      case Type.Float32: return this.reader.readF32()
-      case Type.Float64: return this.reader.readF64()
+      case Format.Float32: return this.reader.readF32()
+      case Format.Float64: return this.reader.readF64()
 
       // String.
-      case Type.Str8: return this.readString(this.reader.readU8())
-      case Type.Str16: return this.readString(this.reader.readU16())
-      case Type.Str32: return this.readString(this.reader.readU32())
+      case Format.Str8: return this.readString(this.reader.readU8())
+      case Format.Str16: return this.readString(this.reader.readU16())
+      case Format.Str32: return this.readString(this.reader.readU32())
 
       // Binary.
-      case Type.Bin8: return this.reader.readRange(this.reader.readU8())
-      case Type.Bin16: return this.reader.readRange(this.reader.readU16())
-      case Type.Bin32: return this.reader.readRange(this.reader.readU32())
+      case Format.Bin8: return this.reader.readRange(this.reader.readU8())
+      case Format.Bin16: return this.reader.readRange(this.reader.readU16())
+      case Format.Bin32: return this.reader.readRange(this.reader.readU32())
 
       // Arrays.
-      case Type.Array16: return this.readArray(this.reader.readU16())
-      case Type.Array32: return this.readArray(this.reader.readU32())
+      case Format.Array16: return this.readArray(this.reader.readU16())
+      case Format.Array32: return this.readArray(this.reader.readU32())
 
       // Maps (objects).
-      case Type.Map16: return this.readObject(this.reader.readU16())
-      case Type.Map32: return this.readObject(this.reader.readU32())
+      case Format.Map16: return this.readObject(this.reader.readU16())
+      case Format.Map32: return this.readObject(this.reader.readU32())
 
       // Extensions.
-      case Type.FixExt1: return this.readExt(1)
-      case Type.FixExt2: return this.readExt(2)
-      case Type.FixExt4: return this.readExt(4)
-      case Type.FixExt8: return this.readExt(8)
-      case Type.FixExt16: return this.readExt(16)
-      case Type.Ext8: return this.readExt(this.reader.readU8())
-      case Type.Ext16: return this.readExt(this.reader.readU16())
-      case Type.Ext32: return this.readExt(this.reader.readU32())
+      case Format.FixExt1: return this.readExt(1)
+      case Format.FixExt2: return this.readExt(2)
+      case Format.FixExt4: return this.readExt(4)
+      case Format.FixExt8: return this.readExt(8)
+      case Format.FixExt16: return this.readExt(16)
+      case Format.Ext8: return this.readExt(this.reader.readU8())
+      case Format.Ext16: return this.readExt(this.reader.readU16())
+      case Format.Ext32: return this.readExt(this.reader.readU32())
 
       // Otherwise fail.
-      default: throw new Error(
+      default: throw new DeserializationError(
         `Unrecognized BackPack type 0x${type.toString(16)} at ${this.reader.offset}.`
       )
     }
@@ -144,18 +145,25 @@ export class Deserializer {
     return map
   }
 
-  private readRef(ref: number): string {
-    return this.refs.get(ref)!
+  private readRef(bytes: number): string {
+    // prettier-ignore
+    switch (bytes) {
+      case 1: return this.refs.get(this.reader.readU8())!
+      case 2: return this.refs.get(this.reader.readU16())!
+
+      default: throw new DeserializationError(
+        `Invalid reference size at ${this.reader.offset}. Expected 1-2 bytes, but got ${bytes}.`
+      )
+    }
   }
 
-  private readExt(length: number): unknown {
+  private readExt(bytes: number): unknown {
     const extType = this.reader.readI8()
 
     // prettier-ignore
     switch (extType) {
-      case Extension.Ref8: return this.readRef(this.reader.readU8())
-      case Extension.Ref16: return this.readRef(this.reader.readU16())
-      default: return this.extensionCodec?.decode(extType, this.reader.readRange(length))
+      case Extension.Ref: return this.readRef(bytes)
+      default: return this.extensionCodec?.decode(extType, this.reader.readRange(bytes))
     }
   }
 }

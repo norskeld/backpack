@@ -1,5 +1,6 @@
 import type { ExtensionCodec } from './codec'
-import { Extension, Type } from './constants'
+import { Extension, Format } from './formats'
+import { SerializationError } from './errors'
 import { DataWriter } from './rw'
 
 export interface SerializerOptions {
@@ -20,7 +21,6 @@ export class Serializer {
   }
 
   encode(data: unknown): void {
-    // TODO: Optionally ignore `undefined`.
     if (data === null || data === undefined) return this.writeNull()
 
     if (typeof data === 'boolean') return this.writeBoolean(data)
@@ -28,7 +28,7 @@ export class Serializer {
     if (typeof data === 'string') return this.writeString(data)
 
     if (typeof data === 'object') {
-      // Try to apply extensions first in case `data` extends UIint8Array or Array.
+      // Try to apply extensions first in case `data` extends `UIint8Array` or `Array`.
       if (this.writeExt(data)) return
 
       if (data instanceof Uint8Array) return this.writeBinary(data)
@@ -37,7 +37,7 @@ export class Serializer {
       return this.writeObject(data)
     }
 
-    throw new Error(`Don't know how to serialize ${data}`)
+    throw new SerializationError(`Unknown data type.`)
   }
 
   takeBytes(): Uint8Array {
@@ -54,53 +54,54 @@ export class Serializer {
   }
 
   private writeNull(): void {
-    this.writer.writeU8(Type.Nil)
+    this.writer.writeU8(Format.Nil)
   }
 
   private writeBoolean(b: boolean): void {
-    this.writer.writeU8(b ? Type.True : Type.False)
+    this.writer.writeU8(b ? Format.True : Format.False)
   }
 
   private writeNumber(n: number): void {
-    // Integers.
-    if (Number.isInteger(n)) this.writeInteger(n)
-    // Floats (and Infinities, I think?).
-    else this.writeFloat(n)
+    if (Number.isInteger(n)) {
+      this.writeInteger(n)
+    } else {
+      this.writeFloat(n)
+    }
   }
 
   private writeInteger(n: number): void {
     // Positive integers.
     if (n > 0) {
-      // Type: positive fixint
+      // Format: positive fixint
       if (n <= 127) this.writer.writeU8(n)
-      // Type: uint 8
-      else if (n <= 255) this.writer.writeU8(Type.Uint8).writeU8(n)
-      // Type: uint 16
-      else if (n <= 65535) this.writer.writeU8(Type.Uint16).writeU16(n)
-      // Type: uint 32
-      else if (n <= 4294967295) this.writer.writeU8(Type.Uint32).writeU32(n)
-      // Type: uint 64
-      else this.writer.writeU8(Type.Uint64).writeU64(n)
+      // Format: uint 8
+      else if (n <= 255) this.writer.writeU8(Format.Uint8).writeU8(n)
+      // Format: uint 16
+      else if (n <= 65535) this.writer.writeU8(Format.Uint16).writeU16(n)
+      // Format: uint 32
+      else if (n <= 4294967295) this.writer.writeU8(Format.Uint32).writeU32(n)
+      // Format: uint 64
+      else this.writer.writeU8(Format.Uint64).writeU64(n)
     }
     // Negative integers.
     else {
-      // Type: negative fixint
+      // Format: negative fixint
       if (n >= -32) this.writer.writeI8(n)
-      // Type: int 8
-      else if (n >= -128) this.writer.writeU8(Type.Int8).writeI8(n)
-      // Type: int 16
-      else if (n >= -32768) this.writer.writeU8(Type.Int16).writeI16(n)
-      // Type: int 32
-      else if (n >= -2147483648) this.writer.writeU8(Type.Int32).writeI32(n)
-      // Type: int 64
-      else this.writer.writeU8(Type.Int64).writeI64(n)
+      // Format: int 8
+      else if (n >= -128) this.writer.writeU8(Format.Int8).writeI8(n)
+      // Format: int 16
+      else if (n >= -32768) this.writer.writeU8(Format.Int16).writeI16(n)
+      // Format: int 32
+      else if (n >= -2147483648) this.writer.writeU8(Format.Int32).writeI32(n)
+      // Format: int 64
+      else this.writer.writeU8(Format.Int64).writeI64(n)
     }
   }
 
   private writeFloat(f: number): void {
     // NOTE: Writing as a double-precision (f64) is intentional here, since writing a
     //  single-precision number (f32) leads to precision loss. :(
-    this.writer.writeU8(Type.Float64).writeF64(f)
+    this.writer.writeU8(Format.Float64).writeF64(f)
   }
 
   private writeString(s: string): void {
@@ -111,16 +112,16 @@ export class Serializer {
     if (length >= 4 && length <= 16) {
       this.writeRef(s)
     } else {
-      // Type: fixstr (up to 31 bytes)
-      if (length <= 31) this.writer.writeU8(Type.FixStr | length)
-      // Type: str + length (u8)
-      else if (length <= 255) this.writer.writeU8(Type.Str8).writeU8(length)
-      // Type: str + length (u16)
-      else if (length <= 65535) this.writer.writeU8(Type.Str16).writeU16(length)
-      // Type: str + length (u32)
-      else if (length <= 4294967295) this.writer.writeU8(Type.Str32).writeU32(length)
-      // Otherwise throwing...
-      else throw new Error('String is too long')
+      // Format: fixstr (up to 31 bytes)
+      if (length <= 31) this.writer.writeU8(Format.FixStr | length)
+      // Format: str + length (u8)
+      else if (length <= 255) this.writer.writeU8(Format.Str8).writeU8(length)
+      // Format: str + length (u16)
+      else if (length <= 65535) this.writer.writeU8(Format.Str16).writeU16(length)
+      // Format: str + length (u32)
+      else if (length <= 4294967295) this.writer.writeU8(Format.Str32).writeU32(length)
+      // Otherwise fail.
+      else throw new SerializationError('String is too long. Max (2^32)-1 bytes.')
 
       this.writer.writeBytes(encoded)
     }
@@ -136,23 +137,23 @@ export class Serializer {
       this.refs.set(key, ref)
     }
 
-    // Type: fixext 1 + extension ref 8 + ref 8
-    if (ref <= 255) this.writer.writeU8(Type.FixExt1).writeI8(Extension.Ref8).writeU8(ref)
-    // Type: fixext 2 + extension ref 16 + ref 16
-    else this.writer.writeU8(Type.FixExt2).writeI8(Extension.Ref16).writeU16(ref)
+    // Format: fixext 1 + extension ref + ref (u8)
+    if (ref <= 255) this.writer.writeU8(Format.FixExt1).writeI8(Extension.Ref).writeU8(ref)
+    // Format: fixext 2 + extension ref + ref (u16)
+    else this.writer.writeU8(Format.FixExt2).writeI8(Extension.Ref).writeU16(ref)
   }
 
   private writeBinary(data: Uint8Array): void {
     const length = data.length
 
-    // Type: bin + length (u8)
-    if (length <= 255) this.writer.writeU8(Type.Bin8).writeU8(length)
-    // Type: bin + length (u16)
-    else if (length <= 65535) this.writer.writeU8(Type.Bin16).writeU16(length)
-    // Type: bin + length (u32)
-    else if (length <= 4294967295) this.writer.writeU8(Type.Bin32).writeU32(length)
-    // Otherwise throwing...
-    else throw new Error('Data is too long')
+    // Format: bin + length (u8)
+    if (length <= 255) this.writer.writeU8(Format.Bin8).writeU8(length)
+    // Format: bin + length (u16)
+    else if (length <= 65535) this.writer.writeU8(Format.Bin16).writeU16(length)
+    // Format: bin + length (u32)
+    else if (length <= 4294967295) this.writer.writeU8(Format.Bin32).writeU32(length)
+    // Otherwise fail.
+    else throw new SerializationError('Binary data is too big. Max (2^32)-1 bytes.')
 
     this.writer.writeBytes(data)
   }
@@ -160,14 +161,14 @@ export class Serializer {
   private writeArray(array: unknown[]): void {
     const length = array.length
 
-    // Type: fixarray (up to 15 elements)
-    if (length <= 15) this.writer.writeU8(Type.FixArray | length)
-    // Type: array + length (u16)
-    else if (length <= 65535) this.writer.writeU8(Type.Array16).writeU16(length)
-    // Type: array + length (u32)
-    else if (length <= 4294967295) this.writer.writeU8(Type.Array32).writeU32(length)
-    // Otherwise throwing...
-    else throw new Error('Array is too big')
+    // Format: fixarray (up to 15 elements)
+    if (length <= 15) this.writer.writeU8(Format.FixArray | length)
+    // Format: array + length (u16)
+    else if (length <= 65535) this.writer.writeU8(Format.Array16).writeU16(length)
+    // Format: array + length (u32)
+    else if (length <= 4294967295) this.writer.writeU8(Format.Array32).writeU32(length)
+    // Otherwise fail.
+    else throw new SerializationError(`Array is too big. Max (2^32)-1 elements.`)
 
     for (const item of array) {
       this.encode(item)
@@ -178,14 +179,14 @@ export class Serializer {
     const entries = Object.entries(o)
     const length = entries.length
 
-    // Type: fixmap + length (up to 15 elements)
-    if (length <= 15) this.writer.writeU8(Type.FixMap | length)
-    // Type: map + length (u16)
-    else if (length <= 65535) this.writer.writeU8(Type.Map16).writeU16(length)
-    // Type: map + length (u32)
-    else if (length <= 4294967295) this.writer.writeU8(Type.Map32).writeU32(length)
-    // Otherwise throwing...
-    else throw new Error('Map is too big')
+    // Format: fixmap + length (up to 15 elements)
+    if (length <= 15) this.writer.writeU8(Format.FixMap | length)
+    // Format: map + length (u16)
+    else if (length <= 65535) this.writer.writeU8(Format.Map16).writeU16(length)
+    // Format: map + length (u32)
+    else if (length <= 4294967295) this.writer.writeU8(Format.Map32).writeU32(length)
+    // Otherwise fail.
+    else throw new SerializationError('Object is too big. Max (2^32)-1 entries.')
 
     for (const [key, value] of entries) {
       this.encode(key)
@@ -201,7 +202,7 @@ export class Serializer {
     const type = this.extensionCodec.getType(object)
 
     if (type < 0) {
-      throw new Error('Negative extension types are reserved.')
+      throw new SerializationError('Negative extension types are reserved.')
     }
 
     const encoded = this.extensionCodec.encode(object)
@@ -209,24 +210,24 @@ export class Serializer {
 
     // Resolving and writing extension format.
 
-    // Type: fixext 1
-    if (length == 1) this.writer.writeU8(Type.FixExt1)
-    // Type: fixext 2
-    else if (length == 2) this.writer.writeU8(Type.FixExt2)
-    // Type: fixext 4
-    else if (length == 4) this.writer.writeU8(Type.FixExt4)
-    // Type: fixext 8
-    else if (length == 8) this.writer.writeU8(Type.FixExt8)
-    // Type: fixext 16
-    else if (length == 16) this.writer.writeU8(Type.FixExt16)
-    // Type: ext 8 + length (u8)
-    else if (length <= 255) this.writer.writeU8(Type.Ext8).writeU8(length)
-    // Type: ext 16 + length (u16)
-    else if (length <= 65535) this.writer.writeU8(Type.Ext16).writeU16(length)
-    // Type: ext 32 + length (u32)
-    else if (length <= 4294967295) this.writer.writeU8(Type.Ext32).writeU32(length)
-    // Otherwise throwing...
-    else throw new Error('Size must be at most 4294967295.')
+    // Format: fixext 1
+    if (length == 1) this.writer.writeU8(Format.FixExt1)
+    // Format: fixext 2
+    else if (length == 2) this.writer.writeU8(Format.FixExt2)
+    // Format: fixext 4
+    else if (length == 4) this.writer.writeU8(Format.FixExt4)
+    // Format: fixext 8
+    else if (length == 8) this.writer.writeU8(Format.FixExt8)
+    // Format: fixext 16
+    else if (length == 16) this.writer.writeU8(Format.FixExt16)
+    // Format: ext 8 + length (u8)
+    else if (length <= 255) this.writer.writeU8(Format.Ext8).writeU8(length)
+    // Format: ext 16 + length (u16)
+    else if (length <= 65535) this.writer.writeU8(Format.Ext16).writeU16(length)
+    // Format: ext 32 + length (u32)
+    else if (length <= 4294967295) this.writer.writeU8(Format.Ext32).writeU32(length)
+    // Otherwise fail.
+    else throw new SerializationError(`Extension data is too big. Max (2^32)-1 bytes.`)
 
     // Writing actual custom extension type and data it encoded.
     this.writer.writeU8(type)
