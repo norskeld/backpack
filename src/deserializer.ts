@@ -1,10 +1,15 @@
 import type { ExtensionCodec } from './codec'
 import { Extension, Format } from './formats'
-import { DeserializationError } from './errors'
 import { DataReader } from './rw'
 
 export interface DeserializerOptions {
   extensionCodec?: ExtensionCodec
+}
+
+export class DeserializationError extends Error {
+  constructor(message: string) {
+    super(`DeserializationError: ${message}`)
+  }
 }
 
 export class Deserializer {
