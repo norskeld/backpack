@@ -13,13 +13,19 @@ describe('serialize/deserialize', () => {
   it('string', () => {
     backpack('hello')
     backpack('привет')
+    backpack('こんにちは世界！')
   })
 
   it('number', () => {
     backpack(0)
     backpack(42)
-    backpack(4.2)
     backpack(-300)
+
+    backpack(4.2)
+    backpack(0.000042)
+
+    backpack(0xff)
+    backpack(0b101010)
   })
 
   it('boolean', () => {
@@ -35,11 +41,16 @@ describe('serialize/deserialize', () => {
     backpack([])
     backpack([42, 69])
     backpack(['hello', 'мир'])
+    backpack([{ message: 'hello world' }, { message: 'bonjour sac à dos' }])
   })
 
   it('object', () => {
     backpack({ hello: 'world' })
     backpack({ message: ['hello', 'world'] })
     backpack({ compact: true, schema: 0 })
+  })
+
+  it('date', () => {
+    backpack(new Date(2020, 2, 22))
   })
 })

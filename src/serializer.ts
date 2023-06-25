@@ -20,8 +20,8 @@ export class Serializer {
 
   constructor(writer: DataWriter, { extensionCodec }: SerializerOptions = {}) {
     this.writer = writer
-    this.textCodec = new TextEncoder()
     this.extensionCodec = extensionCodec
+    this.textCodec = new TextEncoder()
     this.refs = new Map()
   }
 
@@ -36,6 +36,7 @@ export class Serializer {
       // Try to apply extensions first in case `data` extends `UIint8Array` or `Array`.
       if (this.writeExt(data)) return
 
+      if (data instanceof Date) return this.writeTimestamp(data)
       if (data instanceof Uint8Array) return this.writeBinary(data)
       if (Array.isArray(data)) return this.writeArray(data)
 
@@ -148,6 +149,39 @@ export class Serializer {
     else this.writer.writeU8(Format.FixExt2).writeI8(Extension.Ref).writeU16(ref)
   }
 
+  private writeTimestamp(date: Date): void {
+    const seconds = date.getTime() / 1000
+    const ms = date.getMilliseconds()
+
+    // 32-bit seconds
+    if (ms === 0 && seconds >= 0 && seconds <= 4294967295) {
+      this.writer
+        .writeU8(Format.FixExt4)
+        .writeI8(Extension.Timestamp)
+        .writeBytes([seconds >>> 24, seconds >>> 16, seconds >>> 8, seconds])
+    }
+    // 30-bit nanoseconds + 34-bit seconds
+    else if (seconds >= 0 && seconds <= 17179869183) {
+      const ns = ms * 1000000
+
+      this.writer
+        .writeU8(Format.FixExt8)
+        .writeI8(Extension.Timestamp)
+        .writeBytes([ns >>> 22, ns >>> 14, ns >>> 6, ((ns << 2) >>> 0) | (seconds / 4294967296)])
+        .writeBytes([seconds >>> 24, seconds >>> 16, seconds >>> 8, seconds])
+    }
+    // 32-bit nanoseconds + 64-bit seconds
+    else {
+      const ns = ms * 1000000
+
+      this.writer
+        .writeU8(Format.Ext8)
+        .writeI8(Extension.Timestamp)
+        .writeBytes([ns >>> 24, ns >>> 16, ns >>> 8, ns])
+        .writeI64(seconds)
+    }
+  }
+
   private writeBinary(data: Uint8Array): void {
     const length = data.length
 
@@ -211,26 +245,26 @@ export class Serializer {
     }
 
     const encoded = this.extensionCodec.encode(object)
-    const length = encoded.length
+    const size = encoded.length
 
     // Resolving and writing extension format.
 
     // Format: fixext 1
-    if (length == 1) this.writer.writeU8(Format.FixExt1)
+    if (size == 1) this.writer.writeU8(Format.FixExt1)
     // Format: fixext 2
-    else if (length == 2) this.writer.writeU8(Format.FixExt2)
+    else if (size == 2) this.writer.writeU8(Format.FixExt2)
     // Format: fixext 4
-    else if (length == 4) this.writer.writeU8(Format.FixExt4)
+    else if (size == 4) this.writer.writeU8(Format.FixExt4)
     // Format: fixext 8
-    else if (length == 8) this.writer.writeU8(Format.FixExt8)
+    else if (size == 8) this.writer.writeU8(Format.FixExt8)
     // Format: fixext 16
-    else if (length == 16) this.writer.writeU8(Format.FixExt16)
-    // Format: ext 8 + length (u8)
-    else if (length <= 255) this.writer.writeU8(Format.Ext8).writeU8(length)
-    // Format: ext 16 + length (u16)
-    else if (length <= 65535) this.writer.writeU8(Format.Ext16).writeU16(length)
-    // Format: ext 32 + length (u32)
-    else if (length <= 4294967295) this.writer.writeU8(Format.Ext32).writeU32(length)
+    else if (size == 16) this.writer.writeU8(Format.FixExt16)
+    // Format: ext 8 + size (u8)
+    else if (size <= 255) this.writer.writeU8(Format.Ext8).writeU8(size)
+    // Format: ext 16 + size (u16)
+    else if (size <= 65535) this.writer.writeU8(Format.Ext16).writeU16(size)
+    // Format: ext 32 + size (u32)
+    else if (size <= 4294967295) this.writer.writeU8(Format.Ext32).writeU32(size)
     // Otherwise fail.
     else throw new SerializationError(`Extension data is too big. Max (2^32)-1 bytes.`)
 

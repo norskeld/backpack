@@ -20,8 +20,8 @@ export class Deserializer {
 
   constructor(reader: DataReader, { extensionCodec }: DeserializerOptions = {}) {
     this.reader = reader
-    this.textCodec = new TextDecoder()
     this.extensionCodec = extensionCodec
+    this.textCodec = new TextDecoder()
     this.refs = new Map()
   }
 
@@ -150,25 +150,69 @@ export class Deserializer {
     return map
   }
 
-  private readRef(bytes: number): string {
+  private readRef(size: number): string {
     // prettier-ignore
-    switch (bytes) {
+    switch (size) {
       case 1: return this.refs.get(this.reader.readU8())!
       case 2: return this.refs.get(this.reader.readU16())!
 
       default: throw new DeserializationError(
-        `Invalid reference size at ${this.reader.offset}. Expected 1-2 bytes, but got ${bytes}.`
+        `Invalid reference size at ${this.reader.offset}. Expected 1-2 bytes, but got ${size}.`
       )
     }
   }
 
-  private readExt(bytes: number): unknown {
+  private readTimestamp(size: number): Date {
+    const data = this.reader.readRange(size)
+
+    switch (size) {
+      case 4: {
+        const sec =
+          ((data[0] << 24) >>> 0) + ((data[1] << 16) >>> 0) + ((data[2] << 8) >>> 0) + data[3]
+
+        return new Date(sec * 1000)
+      }
+
+      case 8: {
+        const ns =
+          ((data[0] << 22) >>> 0) +
+          ((data[1] << 14) >>> 0) +
+          ((data[2] << 6) >>> 0) +
+          (data[3] >>> 2)
+
+        const sec =
+          (data[3] & 0x3) * 4294967296 +
+          ((data[4] << 24) >>> 0) +
+          ((data[5] << 16) >>> 0) +
+          ((data[6] << 8) >>> 0) +
+          data[7]
+
+        return new Date(sec * 1000 + ns / 1000000)
+      }
+
+      case 12: {
+        const ns =
+          ((data[0] << 24) >>> 0) + ((data[1] << 16) >>> 0) + ((data[2] << 8) >>> 0) + data[3]
+
+        return new Date(data[4] * 1000 + ns / 1000000)
+      }
+
+      default: {
+        throw new DeserializationError(
+          `Invalid date size at ${this.reader.offset}. Expected 4, 8 or 12 bytes, but got ${size}.`
+        )
+      }
+    }
+  }
+
+  private readExt(size: number): unknown {
     const extType = this.reader.readI8()
 
     // prettier-ignore
     switch (extType) {
-      case Extension.Ref: return this.readRef(bytes)
-      default: return this.extensionCodec?.decode(extType, this.reader.readRange(bytes))
+      case Extension.Timestamp: return this.readTimestamp(size)
+      case Extension.Ref: return this.readRef(size)
+      default: return this.extensionCodec?.decode(extType, this.reader.readRange(size))
     }
   }
 }
