@@ -1,10 +1,15 @@
 import type { ExtensionCodec } from './codec'
 import { Extension, Format } from './formats'
-import { SerializationError } from './errors'
 import { DataWriter } from './rw'
 
 export interface SerializerOptions {
   extensionCodec?: ExtensionCodec
+}
+
+export class SerializationError extends Error {
+  constructor(message: string) {
+    super(`SerializationError: ${message}`)
+  }
 }
 
 export class Serializer {
