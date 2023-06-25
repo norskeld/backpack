@@ -196,7 +196,7 @@ export class DataWriter {
     return this
   }
 
-  writeBytes(bytes: Uint8Array): this {
+  writeBytes(bytes: Uint8Array | number[]): this {
     const length = bytes.length
 
     if (length === 0) {
