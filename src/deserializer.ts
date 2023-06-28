@@ -93,9 +93,11 @@ export class Deserializer {
       case Format.Ext32: return this.readExt(this.reader.readU32())
 
       // Otherwise fail.
-      default: throw new DeserializationError(
-        `Unrecognized BackPack type 0x${type.toString(16)} at ${this.reader.offset}.`
-      )
+      default: {
+        throw new DeserializationError(
+          `Unrecognized BackPack type 0x${type.toString(16)} at ${this.reader.offset}.`
+        )
+      }
     }
   }
 
@@ -136,30 +138,68 @@ export class Deserializer {
   }
 
   private readObject(length: number): Record<string, unknown> {
-    const map: Record<string, unknown> = {}
+    const object: Record<string, unknown> = {}
 
     while (length > 0) {
       const key = this.decode() as string
       const value = this.decode()
 
-      map[key] = value
+      object[key] = value
 
       --length
+    }
+
+    return object
+  }
+
+  private readMap(length: number): Map<unknown, unknown> {
+    let size: number
+
+    // prettier-ignore
+    switch (length) {
+      case 1: size = this.reader.readU8(); break
+      case 2: size = this.reader.readU16(); break
+      case 4: size = this.reader.readU32(); break
+
+      default: {
+        throw new DeserializationError(
+          `Invalid map size marker at ${this.reader.offset}. ` +
+            `Expected 1, 2 or 4 bytes, but got ${length}.`
+        )
+      }
+    }
+
+    const map: Map<unknown, unknown> = new Map()
+
+    while (size > 0) {
+      const key = this.decode() as string
+      const value = this.decode()
+
+      map.set(key, value)
+
+      --size
     }
 
     return map
   }
 
-  private readRef(size: number): string {
-    // prettier-ignore
-    switch (size) {
-      case 1: return this.refs.get(this.reader.readU8())!
-      case 2: return this.refs.get(this.reader.readU16())!
+  private readRef(length: number): string {
+    let size: number
 
-      default: throw new DeserializationError(
-        `Invalid reference size at ${this.reader.offset}. Expected 1-2 bytes, but got ${size}.`
-      )
+    // prettier-ignore
+    switch (length) {
+      case 1: size = this.reader.readU8(); break
+      case 2: size = this.reader.readU16(); break
+
+      default: {
+        throw new DeserializationError(
+          `Invalid reference size marker at ${this.reader.offset}. ` +
+            `Expected 1 or 2 bytes, but got ${length}.`
+        )
+      }
     }
+
+    return this.refs.get(size)!
   }
 
   private readTimestamp(size: number): Date {
@@ -199,7 +239,8 @@ export class Deserializer {
 
       default: {
         throw new DeserializationError(
-          `Invalid date size at ${this.reader.offset}. Expected 4, 8 or 12 bytes, but got ${size}.`
+          `Invalid date size marker at ${this.reader.offset}. ` +
+            `Expected 4, 8 or 12 bytes, but got ${size}.`
         )
       }
     }
@@ -212,6 +253,7 @@ export class Deserializer {
     switch (extType) {
       case Extension.Timestamp: return this.readTimestamp(size)
       case Extension.Ref: return this.readRef(size)
+      case Extension.Map: return this.readMap(size)
       default: return this.extensionCodec?.decode(extType, this.reader.readRange(size))
     }
   }

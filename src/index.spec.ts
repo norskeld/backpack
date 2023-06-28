@@ -53,4 +53,42 @@ describe('serialize/deserialize', () => {
   it('date', () => {
     backpack(new Date(2020, 2, 22))
   })
+
+  it('map', () => {
+    backpack(
+      new Map([
+        ['hello', 42],
+        ['blazing', 420],
+        ['turning', 180],
+        ['warhammer', 9000]
+      ])
+    )
+
+    backpack({
+      map: new Map([
+        [42, 'is the meaning'],
+        [420, 'is for blazing'],
+        [69, 'is for pleasure'],
+        [-1000, 'is for the account balance']
+      ])
+    })
+
+    backpack([
+      new Map([
+        ['hello', { message: 'hello' }],
+        ['bye', { message: 'bye' }]
+      ]),
+      new Map([
+        [{ kind: 1 }, 'the first kind'],
+        [{ kind: 2 }, 'the second kind']
+      ])
+    ])
+
+    backpack(
+      new Map([
+        [20200220, new Date(2020, 1, 20)],
+        [19901111, new Date(1990, 10, 11)]
+      ])
+    )
+  })
 })
