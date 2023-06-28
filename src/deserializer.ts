@@ -172,15 +172,40 @@ export class Deserializer {
     const map: Map<unknown, unknown> = new Map()
 
     while (size > 0) {
-      const key = this.decode() as string
-      const value = this.decode()
-
-      map.set(key, value)
+      map.set(this.decode(), this.decode())
 
       --size
     }
 
     return map
+  }
+
+  private readSet(length: number): Set<unknown> {
+    let size: number
+
+    // prettier-ignore
+    switch (length) {
+      case 1: size = this.reader.readU8(); break
+      case 2: size = this.reader.readU16(); break
+      case 4: size = this.reader.readU32(); break
+
+      default: {
+        throw new DeserializationError(
+          `Invalid set size marker at ${this.reader.offset}. ` +
+            `Expected 1, 2 or 4 bytes, but got ${length}.`
+        )
+      }
+    }
+
+    const set: Set<unknown> = new Set()
+
+    while (size > 0) {
+      set.add(this.decode())
+
+      --size
+    }
+
+    return set
   }
 
   private readRef(length: number): string {
@@ -254,6 +279,7 @@ export class Deserializer {
       case Extension.Timestamp: return this.readTimestamp(size)
       case Extension.Ref: return this.readRef(size)
       case Extension.Map: return this.readMap(size)
+      case Extension.Set: return this.readSet(size)
       default: return this.extensionCodec?.decode(extType, this.reader.readRange(size))
     }
   }

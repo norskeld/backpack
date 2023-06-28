@@ -91,4 +91,8 @@ describe('serialize/deserialize', () => {
       ])
     )
   })
+
+  it('set', () => {
+    backpack(new Set(['hello', 'the', 'new', 'world', 'order']))
+  })
 })
