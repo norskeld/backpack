@@ -36,6 +36,7 @@ export class Serializer {
       // Try to apply extensions first in case `data` extends `UIint8Array` or `Array`.
       if (this.writeExt(data)) return
 
+      if (data instanceof Map) return this.writeMap(data)
       if (data instanceof Date) return this.writeTimestamp(data)
       if (data instanceof Uint8Array) return this.writeBinary(data)
       if (Array.isArray(data)) return this.writeArray(data)
@@ -216,16 +217,37 @@ export class Serializer {
 
   private writeObject(o: object): void {
     const entries = Object.entries(o)
-    const length = entries.length
+    const size = entries.length
 
-    // Format: fixmap + length (up to 15 elements)
-    if (length <= 15) this.writer.writeU8(Format.FixMap | length)
-    // Format: map + length (u16)
-    else if (length <= 65535) this.writer.writeU8(Format.Map16).writeU16(length)
-    // Format: map + length (u32)
-    else if (length <= 4294967295) this.writer.writeU8(Format.Map32).writeU32(length)
+    // Format: fixmap + size (up to 15 elements)
+    if (size <= 15) this.writer.writeU8(Format.FixMap | size)
+    // Format: map + size (u16)
+    else if (size <= 65535) this.writer.writeU8(Format.Map16).writeU16(size)
+    // Format: map + size (u32)
+    else if (size <= 4294967295) this.writer.writeU8(Format.Map32).writeU32(size)
     // Otherwise fail.
     else throw new SerializationError('Object is too big. Max (2^32)-1 entries.')
+
+    for (const [key, value] of entries) {
+      this.encode(key)
+      this.encode(value)
+    }
+  }
+
+  private writeMap(m: Map<unknown, unknown>): void {
+    const entries = m.entries()
+    const size = m.size
+
+    // Format: fixext 1 + extension map + size (u8)
+    if (size <= 255) this.writer.writeU8(Format.FixExt1).writeI8(Extension.Map).writeU8(size)
+    // Format: fixext 2 + extension map + size (u16)
+    else if (size <= 65535)
+      this.writer.writeU8(Format.FixExt2).writeI8(Extension.Map).writeU16(size)
+    // Format: fixext 4 + extension map + size (u32)
+    else if (size <= 4294967295)
+      this.writer.writeU8(Format.FixExt4).writeI8(Extension.Map).writeU32(size)
+    // Otherwise fail.
+    else throw new SerializationError('Map is too big. Max (2^32)-1 entries.')
 
     for (const [key, value] of entries) {
       this.encode(key)

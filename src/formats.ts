@@ -64,25 +64,41 @@ export const enum Format {
 /** Built-in BackPack extensions. */
 export const enum Extension {
   /**
-   * **Timestamp extension type**
+   * [Specification extension][spec-timestamp] for serializing/deserializing {@link Date} objects.
    *
-   * Used to serialize and deserialize {@link Date} objects.
-   *
-   * This extension type is assigned to extension type `-1`. It defines 3 formats: 32-bit format,
-   * 64-bit format, and 96-bit format.
+   * [spec-timestamp]: https://github.com/msgpack/msgpack/blob/master/spec.md#timestamp-extension-type
    */
   Timestamp = -1,
 
   /**
-   * **Reference extension type**
-   *
-   * Opt-in extension used for "compressing" repeating data even further.
+   * Built-in extension for "compressing" repeating string data.
    *
    * Works by replacing short (4-16 bytes) repeating strings and property names with 1-2 bytes long
-   * ids (references), which will be replaced back with associated strings when deserializing.
+   * monotonically increasing ids (references), which will be replaced back with associated strings
+   * when deserializing.
    *
-   * This extension type is assigned to extension type `-128` to avoid collisions. It defines 2
-   * formats: 8-bit format and 16-bit format.
+   * ### Formats
+   *
+   * - 8-bit
+   * - 16-bit
+   *
+   * Each represents references of (2^N)-1 at most, where N is the number of format's bits.
    */
-  Ref = -128
+  Ref = -128,
+
+  /**
+   * Built-in extension for serializing/deserializing JavaScript {@link Map}. This is **not** the
+   * same map defined in the [MessagePack specification][spec-map].
+   *
+   * ### Formats
+   *
+   * - 8-bit
+   * - 16-bit
+   * - 32-bit
+   *
+   * Each represents maps with (2^N)-1 entries at most, where N is the number of format's bits.
+   *
+   * [spec-map]: https://github.com/msgpack/msgpack/blob/master/spec.md#map-format-family
+   */
+  Map = -127
 }
