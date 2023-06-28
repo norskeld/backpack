@@ -17,7 +17,7 @@ export class BytesBuilder {
   }
 
   /** Retrieves the accumulated bytes from the builder as a single {@link Uint8Array}. */
-  takeBytes(): Uint8Array {
+  bytes(): Uint8Array {
     let length = 0
     let offset = 0
 
@@ -40,7 +40,7 @@ export class BytesBuilder {
 
 export class DataReader {
   private readonly view: DataView
-  private readonly buffer: Uint8Array
+  private readonly data: Uint8Array
   private ptr: number
 
   get offset() {
@@ -49,72 +49,72 @@ export class DataReader {
 
   constructor(data: Uint8Array) {
     this.view = new DataView(data.buffer, data.byteOffset)
-    this.buffer = data
+    this.data = data
     this.ptr = 0
   }
 
-  readI8(): number {
-    return this.view.getInt8(this.ptr++)
-  }
-
-  readU8(): number {
+  u8(): number {
     return this.view.getUint8(this.ptr++)
   }
 
-  readU16(): number {
+  i8(): number {
+    return this.view.getInt8(this.ptr++)
+  }
+
+  u16(): number {
     const res = this.view.getUint16(this.ptr)
     this.ptr += 2
     return res
   }
 
-  readI16(): number {
+  i16(): number {
     const res = this.view.getInt16(this.ptr)
     this.ptr += 2
     return res
   }
 
-  readU32(): number {
+  u32(): number {
     const res = this.view.getUint32(this.ptr)
     this.ptr += 4
     return res
   }
 
-  readI32(): number {
+  i32(): number {
     const res = this.view.getInt32(this.ptr)
     this.ptr += 4
     return res
   }
 
-  readU64(): number {
+  u64(): number {
     const res = this.view.getBigUint64(this.ptr)
     this.ptr += 8
     return Number(res)
   }
 
-  readI64(): number {
+  i64(): number {
     const res = this.view.getBigInt64(this.ptr)
     this.ptr += 8
     return Number(res)
   }
 
-  readF32(): number {
+  f32(): number {
     const res = this.view.getFloat32(this.ptr)
     this.ptr += 4
     return res
   }
 
-  readF64(): number {
+  f64(): number {
     const res = this.view.getFloat64(this.ptr)
     this.ptr += 8
     return res
   }
 
-  readBuffer(): number {
-    return this.buffer[this.ptr++]
+  atBufferOffset(): number {
+    return this.data[this.ptr++]
   }
 
-  readRange(length: number): Uint8Array {
-    const res = this.buffer.subarray(this.ptr, this.ptr + length)
+  range(length: number): Uint8Array {
+    const res = this.data.subarray(this.ptr, this.ptr + length)
     this.ptr += length
     return res
   }
@@ -133,70 +133,70 @@ export class DataWriter {
     this.builder = builder
   }
 
-  writeU8(i: number): this {
+  u8(i: number): this {
     this.ensureSize(1)
     this.view?.setUint8(this.bufferPtr, i)
     this.bufferPtr += 1
     return this
   }
 
-  writeI8(i: number): this {
+  i8(i: number): this {
     this.ensureSize(1)
     this.view?.setInt8(this.bufferPtr, i)
     this.bufferPtr += 1
     return this
   }
 
-  writeU16(i: number): this {
+  u16(i: number): this {
     this.ensureSize(2)
     this.view?.setUint16(this.bufferPtr, i)
     this.bufferPtr += 2
     return this
   }
 
-  writeI16(i: number): this {
+  i16(i: number): this {
     this.ensureSize(2)
     this.view?.setInt16(this.bufferPtr, i)
     this.bufferPtr += 2
     return this
   }
 
-  writeU32(i: number): this {
+  u32(i: number): this {
     this.ensureSize(4)
     this.view?.setUint32(this.bufferPtr, i)
     this.bufferPtr += 4
     return this
   }
 
-  writeI32(i: number): this {
+  i32(i: number): this {
     this.ensureSize(4)
     this.view?.setInt32(this.bufferPtr, i)
     this.bufferPtr += 4
     return this
   }
 
-  writeU64(i: number): this {
+  u64(i: number): this {
     this.ensureSize(8)
     this.view?.setBigUint64(this.bufferPtr, BigInt(i))
     this.bufferPtr += 8
     return this
   }
 
-  writeI64(i: number): this {
+  i64(i: number): this {
     this.ensureSize(8)
     this.view?.setBigInt64(this.bufferPtr, BigInt(i))
     this.bufferPtr += 8
     return this
   }
 
-  writeF64(f: number): this {
+  f64(f: number): this {
     this.ensureSize(8)
     this.view?.setFloat64(this.bufferPtr, f)
     this.bufferPtr += 8
     return this
   }
 
-  writeBytes(bytes: Uint8Array | number[]): this {
+  batch(bytes: Uint8Array | number[]): this {
     const length = bytes.length
 
     if (length === 0) {
@@ -219,7 +219,7 @@ export class DataWriter {
    * Retrieves the written bytes from the buffer. If there is an internal buffer, concatenates it
    * with the remaining bytes in the builder and returns the result.
    */
-  takeBytes(): Uint8Array {
+  bytes(): Uint8Array {
     if (this.buffer && this.builder.isEmpty) {
       // Creating a view of the the current buffer.
       const view = new Uint8Array(this.buffer.buffer, this.buffer.byteOffset, this.bufferPtr)
@@ -232,7 +232,7 @@ export class DataWriter {
     } else {
       this.appendBuffer()
 
-      return this.builder.takeBytes()
+      return this.builder.bytes()
     }
   }
 

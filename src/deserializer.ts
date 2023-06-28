@@ -26,7 +26,7 @@ export class Deserializer {
   }
 
   decode(): unknown {
-    const type = this.reader.readBuffer()
+    const type = this.reader.atBufferOffset()
 
     // Format: positive fixint
     if (type <= 127) return type
@@ -49,38 +49,38 @@ export class Deserializer {
       case Format.True: return true
 
       // Unsigned integers.
-      case Format.Uint8: return this.reader.readU8()
-      case Format.Uint16: return this.reader.readU16()
-      case Format.Uint32: return this.reader.readU32()
-      case Format.Uint64: return this.reader.readU64()
+      case Format.Uint8: return this.reader.u8()
+      case Format.Uint16: return this.reader.u16()
+      case Format.Uint32: return this.reader.u32()
+      case Format.Uint64: return this.reader.u64()
 
       // Signed integers.
-      case Format.Int8: return this.reader.readI8()
-      case Format.Int16: return this.reader.readI16()
-      case Format.Int32: return this.reader.readI32()
-      case Format.Int64: return this.reader.readI64()
+      case Format.Int8: return this.reader.i8()
+      case Format.Int16: return this.reader.i16()
+      case Format.Int32: return this.reader.i32()
+      case Format.Int64: return this.reader.i64()
 
       // Floats.
-      case Format.Float32: return this.reader.readF32()
-      case Format.Float64: return this.reader.readF64()
+      case Format.Float32: return this.reader.f32()
+      case Format.Float64: return this.reader.f64()
 
       // String.
-      case Format.Str8: return this.readString(this.reader.readU8())
-      case Format.Str16: return this.readString(this.reader.readU16())
-      case Format.Str32: return this.readString(this.reader.readU32())
+      case Format.Str8: return this.readString(this.reader.u8())
+      case Format.Str16: return this.readString(this.reader.u16())
+      case Format.Str32: return this.readString(this.reader.u32())
 
       // Binary.
-      case Format.Bin8: return this.reader.readRange(this.reader.readU8())
-      case Format.Bin16: return this.reader.readRange(this.reader.readU16())
-      case Format.Bin32: return this.reader.readRange(this.reader.readU32())
+      case Format.Bin8: return this.reader.range(this.reader.u8())
+      case Format.Bin16: return this.reader.range(this.reader.u16())
+      case Format.Bin32: return this.reader.range(this.reader.u32())
 
       // Arrays.
-      case Format.Array16: return this.readArray(this.reader.readU16())
-      case Format.Array32: return this.readArray(this.reader.readU32())
+      case Format.Array16: return this.readArray(this.reader.u16())
+      case Format.Array32: return this.readArray(this.reader.u32())
 
       // Maps (objects).
-      case Format.Map16: return this.readObject(this.reader.readU16())
-      case Format.Map32: return this.readObject(this.reader.readU32())
+      case Format.Map16: return this.readObject(this.reader.u16())
+      case Format.Map32: return this.readObject(this.reader.u32())
 
       // Extensions.
       case Format.FixExt1: return this.readExt(1)
@@ -88,9 +88,9 @@ export class Deserializer {
       case Format.FixExt4: return this.readExt(4)
       case Format.FixExt8: return this.readExt(8)
       case Format.FixExt16: return this.readExt(16)
-      case Format.Ext8: return this.readExt(this.reader.readU8())
-      case Format.Ext16: return this.readExt(this.reader.readU16())
-      case Format.Ext32: return this.readExt(this.reader.readU32())
+      case Format.Ext8: return this.readExt(this.reader.u8())
+      case Format.Ext16: return this.readExt(this.reader.u16())
+      case Format.Ext32: return this.readExt(this.reader.u32())
 
       // Otherwise fail.
       default: {
@@ -102,12 +102,12 @@ export class Deserializer {
   }
 
   decodeHeader(): void {
-    let size = this.reader.readU16()
+    let size = this.reader.u16()
 
     while (size > 0) {
-      const ref = this.reader.readU16()
-      const length = this.reader.readU16()
-      const bytes = this.reader.readRange(length)
+      const ref = this.reader.u16()
+      const length = this.reader.u16()
+      const bytes = this.reader.range(length)
 
       this.refs.set(ref, this.textCodec.decode(bytes))
 
@@ -116,7 +116,7 @@ export class Deserializer {
   }
 
   private readString(length: number): string {
-    const bytes = this.reader.readRange(length)
+    const bytes = this.reader.range(length)
 
     for (const byte of bytes) {
       if (byte > 127) {
@@ -157,9 +157,9 @@ export class Deserializer {
 
     // prettier-ignore
     switch (length) {
-      case 1: size = this.reader.readU8(); break
-      case 2: size = this.reader.readU16(); break
-      case 4: size = this.reader.readU32(); break
+      case 1: size = this.reader.u8(); break
+      case 2: size = this.reader.u16(); break
+      case 4: size = this.reader.u32(); break
 
       default: {
         throw new DeserializationError(
@@ -185,9 +185,9 @@ export class Deserializer {
 
     // prettier-ignore
     switch (length) {
-      case 1: size = this.reader.readU8(); break
-      case 2: size = this.reader.readU16(); break
-      case 4: size = this.reader.readU32(); break
+      case 1: size = this.reader.u8(); break
+      case 2: size = this.reader.u16(); break
+      case 4: size = this.reader.u32(); break
 
       default: {
         throw new DeserializationError(
@@ -213,8 +213,8 @@ export class Deserializer {
 
     // prettier-ignore
     switch (length) {
-      case 1: size = this.reader.readU8(); break
-      case 2: size = this.reader.readU16(); break
+      case 1: size = this.reader.u8(); break
+      case 2: size = this.reader.u16(); break
 
       default: {
         throw new DeserializationError(
@@ -228,7 +228,7 @@ export class Deserializer {
   }
 
   private readTimestamp(size: number): Date {
-    const data = this.reader.readRange(size)
+    const data = this.reader.range(size)
 
     switch (size) {
       case 4: {
@@ -272,7 +272,7 @@ export class Deserializer {
   }
 
   private readExt(size: number): unknown {
-    const extType = this.reader.readI8()
+    const extType = this.reader.i8()
 
     // prettier-ignore
     switch (extType) {
@@ -280,7 +280,7 @@ export class Deserializer {
       case Extension.Ref: return this.readRef(size)
       case Extension.Map: return this.readMap(size)
       case Extension.Set: return this.readSet(size)
-      default: return this.extensionCodec?.decode(extType, this.reader.readRange(size))
+      default: return this.extensionCodec?.decode(extType, this.reader.range(size))
     }
   }
 }
