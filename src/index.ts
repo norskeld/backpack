@@ -8,10 +8,10 @@ export function serialize(data: unknown): Uint8Array {
   const serializer = new Serializer(writer)
 
   serializer.encode(data)
-  const body = serializer.takeBytes()
+  const body = serializer.take()
 
   serializer.encodeHeader()
-  const header = serializer.takeBytes()
+  const header = serializer.take()
 
   const serialized = new Uint8Array(body.length + header.length)
 
