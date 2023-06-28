@@ -100,5 +100,18 @@ export const enum Extension {
    *
    * [spec-map]: https://github.com/msgpack/msgpack/blob/master/spec.md#map-format-family
    */
-  Map = -127
+  Map = -127,
+
+  /**
+   * Built-in extension for serializing/deserializing JavaScript {@link Set}.
+   *
+   * ### Formats
+   *
+   * - 8-bit
+   * - 16-bit
+   * - 32-bit
+   *
+   * Each represents sets with (2^N)-1 entries at most, where N is the number of format's bits.
+   */
+  Set = -126
 }

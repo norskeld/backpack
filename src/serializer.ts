@@ -37,6 +37,7 @@ export class Serializer {
       if (this.writeExt(data)) return
 
       if (data instanceof Map) return this.writeMap(data)
+      if (data instanceof Set) return this.writeSet(data)
       if (data instanceof Date) return this.writeTimestamp(data)
       if (data instanceof Uint8Array) return this.writeBinary(data)
       if (Array.isArray(data)) return this.writeArray(data)
@@ -251,6 +252,26 @@ export class Serializer {
 
     for (const [key, value] of entries) {
       this.encode(key)
+      this.encode(value)
+    }
+  }
+
+  private writeSet(s: Set<unknown>): void {
+    const values = s.values()
+    const size = s.size
+
+    // Format: fixext 1 + extension set + size (u8)
+    if (size <= 255) this.writer.writeU8(Format.FixExt1).writeI8(Extension.Set).writeU8(size)
+    // Format: fixext 2 + extension set + size (u16)
+    else if (size <= 65535)
+      this.writer.writeU8(Format.FixExt2).writeI8(Extension.Set).writeU16(size)
+    // Format: fixext 4 + extension set + size (u32)
+    else if (size <= 4294967295)
+      this.writer.writeU8(Format.FixExt4).writeI8(Extension.Set).writeU32(size)
+    // Otherwise fail.
+    else throw new SerializationError('Set is too big. Max (2^32)-1 entries.')
+
+    for (const value of values) {
       this.encode(value)
     }
   }
