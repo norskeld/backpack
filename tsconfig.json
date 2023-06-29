@@ -1,14 +1,19 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
     "outDir": "dist",
     "strict": true,
     "target": "esnext",
-    "module": "commonjs",
+    "module": "esnext",
     "moduleResolution": "node",
     "declaration": true,
     "sourceMap": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@lib": ["src"],
+      "@lib/*": ["src/*"]
+    }
   },
-  "include": [".scripts", "src"]
+  "include": [".scripts", "src", "benchmarks"]
 }
