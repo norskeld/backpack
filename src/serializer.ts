@@ -152,8 +152,9 @@ export class Serializer {
   }
 
   private writeTimestamp(date: Date): void {
-    const seconds = date.getTime() / 1000
-    const ms = date.getMilliseconds()
+    const ms = date.getTime()
+    const ns = ((ms % 1_000) * 1_000_000) | 0
+    const seconds = (((ms / 1_000) | 0) + (((ms % 1_000) * 1_000_000) | 0) / 1_000_000_000) | 0
 
     // 32-bit seconds
     if (ms === 0 && seconds >= 0 && seconds <= 4294967295) {
@@ -164,8 +165,6 @@ export class Serializer {
     }
     // 30-bit nanoseconds + 34-bit seconds
     else if (seconds >= 0 && seconds <= 17179869183) {
-      const ns = ms * 1000000
-
       this.writer
         .u8(Format.FixExt8)
         .i8(Extension.Timestamp)
@@ -174,8 +173,6 @@ export class Serializer {
     }
     // 32-bit nanoseconds + 64-bit seconds
     else {
-      const ns = ms * 1000000
-
       this.writer
         .u8(Format.Ext8)
         .i8(Extension.Timestamp)
