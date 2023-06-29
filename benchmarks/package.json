@@ -1,0 +1,20 @@
+{
+  "version": "1.0.0",
+  "name": "@nrsk/backpack-benchmarks",
+  "description": "Benchmarks for @nrsk/backpack",
+  "private": true,
+  "scripts": {
+    "bench:perf": "tsx src/perf.ts",
+    "bench:size": "tsx src/size.ts"
+  },
+  "dependencies": {
+    "benny": "^3.7.1"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^8.0.2",
+    "@msgpack/msgpack": "^3.0.0-beta2",
+    "@nrsk/unindent": "^1.0.0",
+    "@types/benchmark": "^2.1.2",
+    "tsx": "^3.12.7"
+  }
+}
