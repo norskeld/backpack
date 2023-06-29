@@ -117,7 +117,7 @@ export class Serializer {
     const length = encoded.length
 
     // NOTE: Somehow with these constraints it produces smaller outputs.
-    if (length >= 4 && length <= 16) {
+    if (length >= 2 && length <= 16) {
       this.writeRef(s)
     } else {
       // Format: fixstr (up to 31 bytes)
