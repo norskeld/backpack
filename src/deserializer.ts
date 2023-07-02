@@ -1,5 +1,6 @@
 import type { ExtensionCodec } from './codec'
 import { Extension, Format } from './formats'
+import { decodeUtf8 } from './utils/unicode'
 import { DataReader } from './rw'
 
 export interface DeserializerOptions {
@@ -14,14 +15,12 @@ export class DeserializationError extends Error {
 
 export class Deserializer {
   private readonly reader: DataReader
-  private readonly textCodec: TextDecoder
   private readonly extensionCodec?: ExtensionCodec
   private readonly refs: Map<number, string>
 
   constructor(reader: DataReader, { extensionCodec }: DeserializerOptions = {}) {
     this.reader = reader
     this.extensionCodec = extensionCodec
-    this.textCodec = new TextDecoder()
     this.refs = new Map()
   }
 
@@ -109,7 +108,7 @@ export class Deserializer {
       const length = this.reader.u16()
       const bytes = this.reader.range(length)
 
-      this.refs.set(ref, this.textCodec.decode(bytes))
+      this.refs.set(ref, decodeUtf8(bytes))
 
       --size
     }
@@ -120,7 +119,7 @@ export class Deserializer {
 
     for (const byte of bytes) {
       if (byte > 127) {
-        return this.textCodec.decode(bytes)
+        return decodeUtf8(bytes)
       }
     }
 

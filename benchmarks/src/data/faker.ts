@@ -14,6 +14,7 @@ export function createFakeUser(length: number) {
     age: faker.helpers.rangeToNumber({ min: 18, max: 70 }),
     title: faker.person.jobTitle(),
     birthdate: faker.date.birthdate(),
+    bio: faker.lorem.paragraph({ min: 5, max: 20 }),
     clients: Array.from({ length: faker.helpers.rangeToNumber({ min: 0, max: 100 }) }, () => ({
       id: faker.string.uuid(),
       firstName: faker.person.firstName(),
