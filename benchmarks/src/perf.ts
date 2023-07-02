@@ -21,7 +21,7 @@ suite(
 suite(
   'Deserialize',
 
-  add('JSON.stringify', () => {
+  add('JSON.parse', () => {
     const se = JSON.stringify(sm)
     return () => JSON.parse(se)
   }),
