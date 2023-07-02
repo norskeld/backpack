@@ -7,7 +7,7 @@ describe('serialize/deserialize', () => {
     const serialized = serialize(input)
     const deserialized = deserialize(serialized)
 
-    expect(deserialized).toStrictEqual(input)
+    expect(input).toStrictEqual(deserialized)
   }
 
   it('string', () => {
@@ -52,6 +52,7 @@ describe('serialize/deserialize', () => {
 
   it('date', () => {
     backpack(new Date(2020, 2, 22))
+    backpack(new Date(1920, 2, 22))
   })
 
   it('map', () => {

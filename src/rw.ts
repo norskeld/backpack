@@ -86,15 +86,17 @@ export class DataReader {
   }
 
   u64(): number {
-    const res = this.view.getBigUint64(this.ptr)
-    this.ptr += 8
-    return Number(res)
+    const hi = this.u32()
+    const lo = this.u32()
+
+    return hi * 4_294_967_296 + lo
   }
 
   i64(): number {
-    const res = this.view.getBigInt64(this.ptr)
-    this.ptr += 8
-    return Number(res)
+    const hi = this.i32()
+    const lo = this.u32()
+
+    return hi * 4_294_967_296 + lo
   }
 
   f32(): number {
@@ -177,15 +179,25 @@ export class DataWriter {
 
   u64(i: number): this {
     this.ensureSize(8)
-    this.view?.setBigUint64(this.bufferPtr, BigInt(i))
-    this.bufferPtr += 8
+
+    const hi = i / 4_294_967_296
+    const lo = i
+
+    this.u32(hi)
+    this.u32(lo)
+
     return this
   }
 
   i64(i: number): this {
     this.ensureSize(8)
-    this.view?.setBigInt64(this.bufferPtr, BigInt(i))
-    this.bufferPtr += 8
+
+    const hi = Math.floor(i / 4_294_967_296)
+    const lo = i
+
+    this.u32(hi)
+    this.u32(lo)
+
     return this
   }
 

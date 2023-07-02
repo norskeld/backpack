@@ -228,38 +228,26 @@ export class Deserializer {
   }
 
   private readTimestamp(size: number): Date {
-    const data = this.reader.range(size)
-
     switch (size) {
       case 4: {
-        const sec =
-          ((data[0] << 24) >>> 0) + ((data[1] << 16) >>> 0) + ((data[2] << 8) >>> 0) + data[3]
-
-        return new Date(sec * 1000)
+        return new Date(this.reader.u32() * 1_000)
       }
 
       case 8: {
-        const ns =
-          ((data[0] << 22) >>> 0) +
-          ((data[1] << 14) >>> 0) +
-          ((data[2] << 6) >>> 0) +
-          (data[3] >>> 2)
+        const nsecWithSecHi = this.reader.u32()
+        const secLo = this.reader.u32()
 
-        const sec =
-          (data[3] & 0x3) * 4294967296 +
-          ((data[4] << 24) >>> 0) +
-          ((data[5] << 16) >>> 0) +
-          ((data[6] << 8) >>> 0) +
-          data[7]
+        const sec = (nsecWithSecHi & 3) * 4_294_967_296 + secLo
+        const nsec = nsecWithSecHi >>> 2
 
-        return new Date(sec * 1000 + ns / 1000000)
+        return new Date(sec * 1_000 + nsec / 1_000_000)
       }
 
       case 12: {
-        const ns =
-          ((data[0] << 24) >>> 0) + ((data[1] << 16) >>> 0) + ((data[2] << 8) >>> 0) + data[3]
+        const nsec = this.reader.u32()
+        const sec = this.reader.i64()
 
-        return new Date(data[4] * 1000 + ns / 1000000)
+        return new Date(sec * 1_000 + nsec / 1_000_000)
       }
 
       default: {
