@@ -40,48 +40,48 @@ export class BytesBuilder {
 
 export class DataReader {
   private readonly view: DataView
-  private readonly data: Uint8Array
-  private ptr: number
+  private readonly buffer: Uint8Array
+  private bufferOffset: number
 
   get offset() {
-    return this.ptr
+    return this.bufferOffset
   }
 
   constructor(data: Uint8Array) {
     this.view = new DataView(data.buffer, data.byteOffset)
-    this.data = data
-    this.ptr = 0
+    this.buffer = data
+    this.bufferOffset = 0
   }
 
   u8(): number {
-    return this.view.getUint8(this.ptr++)
+    return this.view.getUint8(this.bufferOffset++)
   }
 
   i8(): number {
-    return this.view.getInt8(this.ptr++)
+    return this.view.getInt8(this.bufferOffset++)
   }
 
   u16(): number {
-    const res = this.view.getUint16(this.ptr)
-    this.ptr += 2
+    const res = this.view.getUint16(this.bufferOffset)
+    this.bufferOffset += 2
     return res
   }
 
   i16(): number {
-    const res = this.view.getInt16(this.ptr)
-    this.ptr += 2
+    const res = this.view.getInt16(this.bufferOffset)
+    this.bufferOffset += 2
     return res
   }
 
   u32(): number {
-    const res = this.view.getUint32(this.ptr)
-    this.ptr += 4
+    const res = this.view.getUint32(this.bufferOffset)
+    this.bufferOffset += 4
     return res
   }
 
   i32(): number {
-    const res = this.view.getInt32(this.ptr)
-    this.ptr += 4
+    const res = this.view.getInt32(this.bufferOffset)
+    this.bufferOffset += 4
     return res
   }
 
@@ -100,80 +100,84 @@ export class DataReader {
   }
 
   f32(): number {
-    const res = this.view.getFloat32(this.ptr)
-    this.ptr += 4
+    const res = this.view.getFloat32(this.bufferOffset)
+    this.bufferOffset += 4
     return res
   }
 
   f64(): number {
-    const res = this.view.getFloat64(this.ptr)
-    this.ptr += 8
+    const res = this.view.getFloat64(this.bufferOffset)
+    this.bufferOffset += 8
     return res
   }
 
   atBufferOffset(): number {
-    return this.data[this.ptr++]
+    return this.buffer[this.bufferOffset++]
   }
 
   range(length: number): Uint8Array {
-    const res = this.data.subarray(this.ptr, this.ptr + length)
-    this.ptr += length
+    const res = this.buffer.subarray(this.bufferOffset, this.bufferOffset + length)
+    this.bufferOffset += length
     return res
   }
 }
 
 export class DataWriter {
   private view: DataView | null
-  private buffer: Uint8Array | null
-  private bufferPtr: number
   private builder: BytesBuilder
+  private buffer: Uint8Array | null
+  private bufferOffset: number
+
+  get offset() {
+    return this.bufferOffset
+  }
 
   constructor(builder: BytesBuilder) {
     this.view = null
     this.buffer = null
-    this.bufferPtr = 0
+    this.bufferOffset = 0
     this.builder = builder
   }
 
   u8(i: number): this {
     this.ensureSize(1)
-    this.view?.setUint8(this.bufferPtr, i)
-    this.bufferPtr += 1
+    this.view?.setUint8(this.bufferOffset, i)
+    this.bufferOffset += 1
     return this
   }
 
   i8(i: number): this {
     this.ensureSize(1)
-    this.view?.setInt8(this.bufferPtr, i)
-    this.bufferPtr += 1
+    this.view?.setInt8(this.bufferOffset, i)
+    this.bufferOffset += 1
     return this
   }
 
   u16(i: number): this {
     this.ensureSize(2)
-    this.view?.setUint16(this.bufferPtr, i)
-    this.bufferPtr += 2
+    this.view?.setUint16(this.bufferOffset, i)
+    this.bufferOffset += 2
     return this
   }
 
   i16(i: number): this {
     this.ensureSize(2)
-    this.view?.setInt16(this.bufferPtr, i)
-    this.bufferPtr += 2
+    this.view?.setInt16(this.bufferOffset, i)
+    this.bufferOffset += 2
     return this
   }
 
   u32(i: number): this {
     this.ensureSize(4)
-    this.view?.setUint32(this.bufferPtr, i)
-    this.bufferPtr += 4
+    this.view?.setUint32(this.bufferOffset, i)
+    this.bufferOffset += 4
     return this
   }
 
   i32(i: number): this {
     this.ensureSize(4)
-    this.view?.setInt32(this.bufferPtr, i)
-    this.bufferPtr += 4
+    this.view?.setInt32(this.bufferOffset, i)
+    this.bufferOffset += 4
     return this
   }
 
@@ -203,8 +207,8 @@ export class DataWriter {
 
   f64(f: number): this {
     this.ensureSize(8)
-    this.view?.setFloat64(this.bufferPtr, f)
-    this.bufferPtr += 8
+    this.view?.setFloat64(this.bufferOffset, f)
+    this.bufferOffset += 8
     return this
   }
 
@@ -217,11 +221,11 @@ export class DataWriter {
 
     this.ensureSize(length)
 
-    if (this.bufferPtr === 0) {
+    if (this.bufferOffset === 0) {
       this.builder.add(bytes)
     } else {
-      this.buffer?.set(bytes, this.bufferPtr)
-      this.bufferPtr += length
+      this.buffer?.set(bytes, this.bufferOffset)
+      this.bufferOffset += length
     }
 
     return this
@@ -234,9 +238,9 @@ export class DataWriter {
   bytes(): Uint8Array {
     if (this.buffer && this.builder.isEmpty) {
       // Creating a view of the the current buffer.
-      const view = new Uint8Array(this.buffer.buffer, this.buffer.byteOffset, this.bufferPtr)
+      const view = new Uint8Array(this.buffer.buffer, this.buffer.byteOffset, this.bufferOffset)
 
-      this.bufferPtr = 0
+      this.bufferOffset = 0
       this.buffer = null
       this.view = null
 
@@ -258,7 +262,7 @@ export class DataWriter {
       this.view = new DataView(this.buffer.buffer, this.buffer.byteOffset)
     }
 
-    const remaining = this.buffer.length - this.bufferPtr
+    const remaining = this.buffer.length - this.bufferOffset
 
     if (remaining < size) {
       this.appendBuffer()
@@ -270,8 +274,8 @@ export class DataWriter {
    * (offset). If the builder is empty, it directly sets the builder to the current buffer.
    */
   private appendBuffer(): void {
-    if (this.buffer && this.bufferPtr > 0) {
-      const view = new Uint8Array(this.buffer.buffer, this.buffer.byteOffset, this.bufferPtr)
+    if (this.buffer && this.bufferOffset > 0) {
+      const view = new Uint8Array(this.buffer.buffer, this.buffer.byteOffset, this.bufferOffset)
 
       if (this.builder.isEmpty) {
         this.builder.add(view)
@@ -282,7 +286,7 @@ export class DataWriter {
         this.builder.add(view)
       }
 
-      this.bufferPtr = 0
+      this.bufferOffset = 0
     }
   }
 }

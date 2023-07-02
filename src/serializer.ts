@@ -1,5 +1,6 @@
 import type { ExtensionCodec } from './codec'
 import { Extension, Format } from './formats'
+import { encodeUtf8 } from './utils/unicode'
 import { DataWriter } from './rw'
 
 export interface SerializerOptions {
@@ -14,14 +15,12 @@ export class SerializationError extends Error {
 
 export class Serializer {
   private readonly writer: DataWriter
-  private readonly textCodec: TextEncoder
   private readonly extensionCodec?: ExtensionCodec
   private readonly refs: Map<string, number>
 
   constructor(writer: DataWriter, { extensionCodec }: SerializerOptions = {}) {
     this.writer = writer
     this.extensionCodec = extensionCodec
-    this.textCodec = new TextEncoder()
     this.refs = new Map()
   }
 
@@ -56,7 +55,7 @@ export class Serializer {
     this.writer.u16(this.refs.size)
 
     for (const [key, ref] of this.refs.entries()) {
-      const encoded = this.textCodec.encode(key)
+      const encoded = encodeUtf8(key)
       this.writer.u16(ref).u16(encoded.length).batch(encoded)
     }
   }
@@ -113,7 +112,7 @@ export class Serializer {
   }
 
   private writeString(s: string): void {
-    const encoded = this.textCodec.encode(s)
+    const encoded = encodeUtf8(s)
     const length = encoded.length
 
     // NOTE: Somehow with these constraints it produces smaller outputs.

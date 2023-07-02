@@ -10,7 +10,7 @@ import { getGzipSize, report, reportAverage, reportMedian } from './utils'
 
 interface BenchCase {
   name: string
-  factory: () => Promise<unknown>
+  factory: () => unknown
 }
 
 interface RunOptions {
@@ -25,7 +25,7 @@ async function run(benches: Array<BenchCase>, options: Partial<RunOptions> = {})
   const collected = []
 
   for (const bench of benches) {
-    const data = await bench.factory()
+    const data = bench.factory()
 
     const json = JSON.stringify(data)
     const jsonGz = await getGzipSize(Buffer.from(json, 'utf8'))
@@ -67,11 +67,13 @@ async function run(benches: Array<BenchCase>, options: Partial<RunOptions> = {})
   if (withMedians) reportMedian(collected)
 }
 
-await run([
-  { name: 'one (1)', factory: async () => createFakeUser(1) },
-  { name: 'sm (100)', factory: async () => createFakeUser(100) },
-  { name: 'md (1,000)', factory: async () => createFakeUser(1000) },
-  { name: 'lg (10,000)', factory: async () => createFakeUser(10000) },
-  { name: 'rust-lang repositories list', factory: async () => repos },
-  { name: 'npm meta for @nrsk/sigma', factory: async () => npm }
-])
+;(async () => {
+  await run([
+    { name: 'one (1)', factory: () => createFakeUser(1) },
+    { name: 'sm (100)', factory: () => createFakeUser(100) },
+    { name: 'md (1,000)', factory: () => createFakeUser(1000) },
+    { name: 'lg (10,000)', factory: () => createFakeUser(10000) },
+    { name: 'rust-lang repositories list', factory: () => repos },
+    { name: 'npm meta for @nrsk/sigma', factory: () => npm }
+  ])
+})()
