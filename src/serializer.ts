@@ -152,32 +152,36 @@ export class Serializer {
   }
 
   private writeTimestamp(date: Date): void {
-    const ms = date.getTime()
-    const ns = ((ms % 1_000) * 1_000_000) | 0
-    const seconds = (((ms / 1_000) | 0) + (((ms % 1_000) * 1_000_000) | 0) / 1_000_000_000) | 0
+    const msec = date.getTime()
 
-    // 32-bit seconds
-    if (ms === 0 && seconds >= 0 && seconds <= 4294967295) {
-      this.writer
-        .u8(Format.FixExt4)
-        .i8(Extension.Timestamp)
-        .batch([seconds >>> 24, seconds >>> 16, seconds >>> 8, seconds])
+    const secRaw = Math.floor(msec / 1_000)
+    const nsecRaw = (msec - secRaw * 1_000) * 1_000_000
+
+    const nsecInSec = Math.floor(nsecRaw / 1_000_000_000)
+
+    const sec = secRaw + nsecInSec
+    const nsec = nsecRaw - nsecInSec * 1_000_000_000
+
+    if (sec >= 0 && nsec >= 0 && sec <= 17_179_869_183) {
+      // Timestamp 32: 32-bit seconds
+      if (nsec === 0 && sec <= 4_294_967_295) {
+        this.writer.u8(Format.FixExt4).i8(Extension.Timestamp).u32(sec)
+      }
+      // Timestamp 64: 30-bit nanoseconds + 34-bit seconds
+      else {
+        const secHi = sec / 4_294_967_296
+        const secLo = sec & 4_294_967_295
+
+        this.writer
+          .u8(Format.FixExt8)
+          .i8(Extension.Timestamp)
+          .u32((nsec << 2) | (secHi & 3))
+          .u32(secLo)
+      }
     }
-    // 30-bit nanoseconds + 34-bit seconds
-    else if (seconds >= 0 && seconds <= 17179869183) {
-      this.writer
-        .u8(Format.FixExt8)
-        .i8(Extension.Timestamp)
-        .batch([ns >>> 22, ns >>> 14, ns >>> 6, ((ns << 2) >>> 0) | (seconds / 4294967296)])
-        .batch([seconds >>> 24, seconds >>> 16, seconds >>> 8, seconds])
-    }
-    // 32-bit nanoseconds + 64-bit seconds
+    // Timestamp 96: 32-bit nanoseconds + 64-bit seconds
     else {
-      this.writer
-        .u8(Format.Ext8)
-        .i8(Extension.Timestamp)
-        .batch([ns >>> 24, ns >>> 16, ns >>> 8, ns])
-        .i64(seconds)
+      this.writer.u8(Format.Ext8).u8(12).i8(Extension.Timestamp).u32(nsec).i64(sec)
     }
   }
 
