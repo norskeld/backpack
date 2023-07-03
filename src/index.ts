@@ -1,24 +1,19 @@
-import { BytesBuilder, DataReader, DataWriter } from './rw'
+import { DataReader, DataWriter } from './io'
 import { Deserializer } from './deserializer'
 import { Serializer } from './serializer'
 
+const SharedBodyWriter = new DataWriter()
+const SharedHeaderWriter = new DataWriter()
+
+const SharedSerializer = new Serializer({
+  writers: {
+    body: SharedBodyWriter,
+    header: SharedHeaderWriter
+  }
+})
+
 export function serialize(data: unknown): Uint8Array {
-  const builder = new BytesBuilder()
-  const writer = new DataWriter(builder)
-  const serializer = new Serializer(writer)
-
-  serializer.encode(data)
-  const body = serializer.take()
-
-  serializer.encodeHeader()
-  const header = serializer.take()
-
-  const serialized = new Uint8Array(body.length + header.length)
-
-  serialized.set(header)
-  serialized.set(body, header.length)
-
-  return serialized
+  return SharedSerializer.serialize(data)
 }
 
 export function deserialize<T = unknown>(data: Uint8Array): T {
