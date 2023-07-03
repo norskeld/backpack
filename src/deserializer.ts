@@ -1,7 +1,7 @@
 import type { ExtensionCodec } from './codec'
 import { Extension, Format } from './formats'
 import { decodeUtf8 } from './utils/unicode'
-import { DataReader } from './rw'
+import { DataReader } from './io'
 
 export interface DeserializerOptions {
   extensionCodec?: ExtensionCodec
