@@ -10,12 +10,6 @@ export class UnicodeDecodingError extends Error {
   }
 }
 
-const TEXT_ENCODER_THRESHOLD = 64
-const TEXT_DECODER_THRESHOLD = 256
-
-const SharedTextEncoder = new TextEncoder()
-const SharedTextDecoder = new TextDecoder()
-
 const StringCache = new Map<string, Uint8Array>()
 
 /** Iterates over a string and returns its length in bytes. */
@@ -24,8 +18,8 @@ export function size(string: string): number {
 
   let size = 0
 
-  for (let index = 0; index < chars; index++) {
-    const high = string.charCodeAt(index)
+  for (let pos = 0; pos < chars; pos++) {
+    const high = string.charCodeAt(pos)
 
     switch (true) {
       case high < 0x0080: {
@@ -44,9 +38,9 @@ export function size(string: string): number {
       }
 
       case high < 0xdc00: {
-        const low = string.charCodeAt(++index)
+        const low = string.charCodeAt(++pos)
 
-        if (index < chars && low >= 0xdc00 && low <= 0xdfff) {
+        if (pos < chars && low >= 0xdc00 && low <= 0xdfff) {
           size += 4
           break
         } else {
@@ -68,25 +62,19 @@ export function size(string: string): number {
   return size
 }
 
-/** Encodes a string to UTF-8 bytes. */
-export function encodeUtf8(s: string) {
-  if (StringCache.has(s)) {
-    return StringCache.get(s)!
+/** Encodes UTF-8 string into bytes. */
+export function encodeUtf8(string: string) {
+  if (StringCache.has(string)) {
+    return StringCache.get(string)!
   }
 
-  const length = s.length
-
-  const bytes = new Uint8Array(size(s))
-
-  if (length > TEXT_ENCODER_THRESHOLD) {
-    SharedTextEncoder.encodeInto(s, bytes)
-    return bytes
-  }
+  const length = string.length
+  const bytes = new Uint8Array(size(string))
 
   let offset = 0
 
   for (let pos = 0; pos !== length; pos++) {
-    let char = s.charCodeAt(pos)
+    let char = string.charCodeAt(pos)
 
     if (char < 128) {
       bytes[offset++] = char
@@ -101,7 +89,7 @@ export function encodeUtf8(s: string) {
           throw new UnicodeEncodingError('Incomplete surrogate pair.')
         }
 
-        const otherChar = s.charCodeAt(pos)
+        const otherChar = string.charCodeAt(pos)
 
         if (otherChar < 0xdc00 || otherChar > 0xdfff) {
           throw new UnicodeEncodingError(
@@ -123,17 +111,13 @@ export function encodeUtf8(s: string) {
     bytes[offset++] = (char & 63) | 128
   }
 
-  StringCache.set(s, bytes)
+  StringCache.set(string, bytes)
 
   return bytes
 }
 
-/** Decodes a string from UTF-8 bytes. */
+/** Decodes bytes into UTF-8 string. */
 export function decodeUtf8(bytes: Uint8Array) {
-  if (bytes.length > TEXT_DECODER_THRESHOLD) {
-    return SharedTextDecoder.decode(bytes)
-  }
-
   let offset = 0
   let result = ''
 
