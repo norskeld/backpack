@@ -74,10 +74,10 @@ export class Serializer {
   private encodeHeader(): void {
     this.header.u16(this.refs.size)
 
-    for (const [key, ref] of this.refs) {
+    this.refs.forEach((ref, key) => {
       const encoded = encodeUtf8(key)
       this.header.u16(ref).u16(encoded.length).batch(encoded)
-    }
+    })
   }
 
   private writeNull(): void {
