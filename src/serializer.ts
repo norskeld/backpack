@@ -132,22 +132,27 @@ export class Serializer {
   }
 
   private writeString(s: string): void {
-    const encoded = encodeUtf8(s)
-    const length = encoded.length
+    const chars = s.length
 
-    if (length >= 2 && length <= 16) return this.writeRef(s)
-    // Format: fixstr (up to 31 bytes)
-    else if (length <= 31) this.body.u8(Format.FixStr | length)
-    // Format: str + length (u8)
-    else if (length <= 255) this.body.u8(Format.Str8).u8(length)
-    // Format: str + length (u16)
-    else if (length <= 65535) this.body.u8(Format.Str16).u16(length)
-    // Format: str + length (u32)
-    else if (length <= 4294967295) this.body.u8(Format.Str32).u32(length)
-    // Otherwise fail.
-    else throw new SerializationError('String is too long. Max (2^32)-1 bytes.')
+    if (chars >= 2 && chars <= 16) {
+      this.writeRef(s)
+    } else {
+      const encoded = encodeUtf8(s)
+      const length = encoded.length
 
-    this.body.batch(encoded)
+      // Format: fixstr (up to 31 bytes)
+      if (length <= 31) this.body.u8(Format.FixStr | length)
+      // Format: str + length (u8)
+      else if (length <= 255) this.body.u8(Format.Str8).u8(length)
+      // Format: str + length (u16)
+      else if (length <= 65535) this.body.u8(Format.Str16).u16(length)
+      // Format: str + length (u32)
+      else if (length <= 4294967295) this.body.u8(Format.Str32).u32(length)
+      // Otherwise fail.
+      else throw new SerializationError('String is too long. Max (2^32)-1 bytes.')
+
+      this.body.batch(encoded)
+    }
   }
 
   private writeRef(key: string): void {
