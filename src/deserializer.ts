@@ -115,15 +115,7 @@ export class Deserializer {
   }
 
   private readString(length: number): string {
-    const bytes = this.reader.range(length)
-
-    for (const byte of bytes) {
-      if (byte > 127) {
-        return decodeUtf8(bytes)
-      }
-    }
-
-    return String.fromCharCode(...bytes)
+    return decodeUtf8(this.reader.range(length))
   }
 
   private readArray(length: number): unknown[] {
