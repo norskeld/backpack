@@ -118,10 +118,10 @@ export function encodeUtf8(string: string) {
 
 /** Decodes bytes into UTF-8 string. */
 export function decodeUtf8(bytes: Uint8Array) {
-  let offset = 0
-  let result = ''
-
   const length = bytes.length
+  const chars: Array<number> = []
+
+  let offset = 0
 
   while (offset < length) {
     let char = bytes[offset++]
@@ -157,15 +157,18 @@ export function decodeUtf8(bytes: Uint8Array) {
     }
 
     if (char <= 0xffff) {
-      result += String.fromCharCode(char)
+      chars.push(char)
     } else if (char <= 0x10ffff) {
       char -= 0x10000
-      result += String.fromCharCode((char >> 10) | 0xd800)
-      result += String.fromCharCode((char & 0x3ff) | 0xdc00)
+
+      const first = (char >> 10) | 0xd800
+      const second = (char & 0x3ff) | 0xdc00
+
+      chars.push(first, second)
     } else {
       throw new UnicodeDecodingError(`Codepoint 0x${char.toString(16)} exceeds UTF-16 range.`)
     }
   }
 
-  return result
+  return String.fromCharCode(...chars)
 }
