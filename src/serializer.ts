@@ -31,8 +31,7 @@ export class Serializer {
   }
 
   serialize(data: unknown) {
-    this.body.resetOffset()
-    this.header.resetOffset()
+    this.reset()
 
     this.encode(data)
     const body = this.body.bytesRef()
@@ -46,6 +45,12 @@ export class Serializer {
     serialized.set(body, header.length)
 
     return serialized
+  }
+
+  private reset() {
+    this.body.resetOffset()
+    this.header.resetOffset()
+    this.refs.clear()
   }
 
   private encode(data: unknown): void {
