@@ -262,9 +262,8 @@ export class Serializer {
     }
   }
 
-  private writeMap(m: Map<unknown, unknown>): void {
-    const entries = m.entries()
-    const size = m.size
+  private writeMap(map: Map<unknown, unknown>): void {
+    const size = map.size
 
     // Format: fixext 1 + extension map + size (u8)
     if (size <= 255) this.body.u8(Format.FixExt1).i8(Extension.Map).u8(size)
@@ -275,15 +274,14 @@ export class Serializer {
     // Otherwise fail.
     else throw new SerializationError('Map is too big. Max (2^32)-1 entries.')
 
-    for (const [key, value] of entries) {
+    for (const [key, value] of map) {
       this.encode(key)
       this.encode(value)
     }
   }
 
-  private writeSet(s: Set<unknown>): void {
-    const values = s.values()
-    const size = s.size
+  private writeSet(set: Set<unknown>): void {
+    const size = set.size
 
     // Format: fixext 1 + extension set + size (u8)
     if (size <= 255) this.body.u8(Format.FixExt1).i8(Extension.Set).u8(size)
@@ -294,7 +292,7 @@ export class Serializer {
     // Otherwise fail.
     else throw new SerializationError('Set is too big. Max (2^32)-1 entries.')
 
-    for (const value of values) {
+    for (const value of set) {
       this.encode(value)
     }
   }
@@ -316,15 +314,15 @@ export class Serializer {
     // Resolving and writing extension format.
 
     // Format: fixext 1
-    if (size == 1) this.body.u8(Format.FixExt1)
+    if (size === 1) this.body.u8(Format.FixExt1)
     // Format: fixext 2
-    else if (size == 2) this.body.u8(Format.FixExt2)
+    else if (size === 2) this.body.u8(Format.FixExt2)
     // Format: fixext 4
-    else if (size == 4) this.body.u8(Format.FixExt4)
+    else if (size === 4) this.body.u8(Format.FixExt4)
     // Format: fixext 8
-    else if (size == 8) this.body.u8(Format.FixExt8)
+    else if (size === 8) this.body.u8(Format.FixExt8)
     // Format: fixext 16
-    else if (size == 16) this.body.u8(Format.FixExt16)
+    else if (size === 16) this.body.u8(Format.FixExt16)
     // Format: ext 8 + size (u8)
     else if (size <= 255) this.body.u8(Format.Ext8).u8(size)
     // Format: ext 16 + size (u16)
