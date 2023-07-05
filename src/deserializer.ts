@@ -13,7 +13,7 @@ export class DeserializationError extends Error {
   }
 }
 
-export class Deserializer {
+export class Deserializer<T = unknown> {
   private readonly reader: DataReader
   private readonly extensionCodec?: ExtensionCodec
   private readonly refs: Map<number, string>
@@ -24,7 +24,13 @@ export class Deserializer {
     this.refs = new Map()
   }
 
-  decode(): unknown {
+  deserialize(): T {
+    this.decodeHeader()
+
+    return this.decode() as T
+  }
+
+  private decode(): unknown {
     const type = this.reader.atBufferOffset()
 
     // Format: positive fixint
@@ -163,7 +169,10 @@ export class Deserializer {
     const map: Map<unknown, unknown> = new Map()
 
     while (size > 0) {
-      map.set(this.decode(), this.decode())
+      const key = this.decode()
+      const value = this.decode()
+
+      map.set(key, value)
 
       --size
     }
