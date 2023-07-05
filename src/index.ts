@@ -18,9 +18,7 @@ export function serialize(data: unknown): Uint8Array {
 
 export function deserialize<T = unknown>(data: Uint8Array): T {
   const reader = new DataReader(data)
-  const deserializer = new Deserializer(reader)
+  const deserializer = new Deserializer<T>(reader)
 
-  deserializer.decodeHeader()
-
-  return deserializer.decode() as T
+  return deserializer.deserialize()
 }
