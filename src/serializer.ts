@@ -56,7 +56,7 @@ export class Serializer {
     if (typeof data === 'string') return this.writeString(data)
 
     if (typeof data === 'object') {
-      // Try to apply extensions first in case `data` extends `UIint8Array` or `Array`.
+      // Try to apply extensions first in case `data` extends `Array`.
       if (this.writeExt(data)) return
 
       if (data instanceof Map) return this.writeMap(data)
@@ -90,13 +90,13 @@ export class Serializer {
 
   private writeNumber(n: number): void {
     if (Number.isInteger(n)) {
-      this.integer(n)
+      this.writeInteger(n)
     } else {
-      this.float(n)
+      this.writeFloat(n)
     }
   }
 
-  private integer(n: number): void {
+  private writeInteger(n: number): void {
     // Positive integers.
     if (n > 0) {
       // Format: positive fixint
@@ -125,7 +125,7 @@ export class Serializer {
     }
   }
 
-  private float(f: number): void {
+  private writeFloat(f: number): void {
     // NOTE: Writing as a double-precision (f64) is intentional here, since writing a
     //  single-precision number (f32) leads to precision loss. :(
     this.body.u8(Format.Float64).f64(f)
