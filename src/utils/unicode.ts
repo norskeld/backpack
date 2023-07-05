@@ -1,12 +1,6 @@
-export class UnicodeEncodingError extends Error {
+export class UnicodeError extends Error {
   constructor(message: string) {
-    super(`UnicodeEncodingError: ${message}`)
-  }
-}
-
-export class UnicodeDecodingError extends Error {
-  constructor(message: string) {
-    super(`UnicodeDecodingError: ${message}`)
+    super(`UnicodeError: ${message}`)
   }
 }
 
@@ -44,12 +38,12 @@ export function size(string: string): number {
           size += 4
           break
         } else {
-          throw new Error('Malformed Unicode string with missing or invalid low surrogate.')
+          throw new UnicodeError('Malformed Unicode string with missing or invalid low surrogate.')
         }
       }
 
       case high < 0xe000: {
-        throw new Error('Malformed Unicode string with invalid high surrogate.')
+        throw new UnicodeError('Malformed Unicode string with invalid high surrogate.')
       }
 
       default: {
@@ -86,15 +80,14 @@ export function encodeUtf8(string: string) {
     } else {
       if (char > 0xd7ff && char < 0xdc00) {
         if (++pos >= length) {
-          throw new UnicodeEncodingError('Incomplete surrogate pair.')
+          throw new UnicodeError('Incomplete surrogate pair.')
         }
 
         const otherChar = string.charCodeAt(pos)
 
         if (otherChar < 0xdc00 || otherChar > 0xdfff) {
-          throw new UnicodeEncodingError(
-            `Second surrogate character 0x${otherChar.toString(16)}' at '${pos}' ` +
-              `is out of range.`
+          throw new UnicodeError(
+            `Second surrogate character 0x${otherChar.toString(16)}' at '${pos}' is out of range.`
           )
         }
 
@@ -129,19 +122,19 @@ export function decodeUtf8(bytes: Uint8Array) {
     if (char > 127) {
       if (char > 191 && char < 224) {
         if (offset >= length) {
-          throw new UnicodeDecodingError('Incomplete 2-byte sequence.')
+          throw new UnicodeError('Incomplete 2-byte sequence.')
         }
 
         char = ((char & 31) << 6) | (bytes[offset++] & 63)
       } else if (char > 223 && char < 240) {
         if (offset + 1 >= length) {
-          throw new UnicodeDecodingError('Incomplete 3-byte sequence.')
+          throw new UnicodeError('Incomplete 3-byte sequence.')
         }
 
         char = ((char & 15) << 12) | ((bytes[offset++] & 63) << 6) | (bytes[offset++] & 63)
       } else if (char > 239 && char < 248) {
         if (offset + 2 >= length) {
-          throw new UnicodeDecodingError('Incomplete 4-byte sequence.')
+          throw new UnicodeError('Incomplete 4-byte sequence.')
         }
 
         char =
@@ -150,9 +143,7 @@ export function decodeUtf8(bytes: Uint8Array) {
           ((bytes[offset++] & 63) << 6) |
           (bytes[offset++] & 63)
       } else {
-        throw new UnicodeDecodingError(
-          `Unknown multibyte 0x${char.toString(16)} at '${offset - 1}'.`
-        )
+        throw new UnicodeError(`Unknown multibyte 0x${char.toString(16)} at '${offset - 1}'.`)
       }
     }
 
@@ -166,7 +157,7 @@ export function decodeUtf8(bytes: Uint8Array) {
 
       chars.push(first, second)
     } else {
-      throw new UnicodeDecodingError(`Codepoint 0x${char.toString(16)} exceeds UTF-16 range.`)
+      throw new UnicodeError(`Codepoint 0x${char.toString(16)} exceeds UTF-16 range.`)
     }
   }
 
