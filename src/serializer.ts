@@ -1,6 +1,6 @@
+import { unicodeStringToBytes } from './utils/unicode'
 import type { ExtensionCodec } from './codec'
 import { Extension, Format } from './formats'
-import { encodeUtf8 } from './utils/unicode'
 import { DataWriter } from './io'
 
 export interface SerializerOptions {
@@ -80,8 +80,8 @@ export class Serializer {
     this.header.u16(this.refs.size)
 
     this.refs.forEach((ref, key) => {
-      const encoded = encodeUtf8(key)
-      this.header.u16(ref).u16(encoded.length).batch(encoded)
+      const encoded = unicodeStringToBytes(key)
+      this.header.u16(ref).u16(encoded.length).set(encoded)
     })
   }
 
@@ -142,7 +142,7 @@ export class Serializer {
     if (chars >= 2 && chars <= 16) {
       this.writeRef(s)
     } else {
-      const encoded = encodeUtf8(s)
+      const encoded = unicodeStringToBytes(s)
       const length = encoded.length
 
       // Format: fixstr (up to 31 bytes)
@@ -156,7 +156,7 @@ export class Serializer {
       // Otherwise fail.
       else throw new SerializationError('String is too long. Max (2^32)-1 bytes.')
 
-      this.body.batch(encoded)
+      this.body.set(encoded)
     }
   }
 
@@ -222,7 +222,7 @@ export class Serializer {
     // Otherwise fail.
     else throw new SerializationError('Binary data is too big. Max (2^32)-1 bytes.')
 
-    this.body.batch(data)
+    this.body.set(data)
   }
 
   private writeArray(array: unknown[]): void {
@@ -333,7 +333,7 @@ export class Serializer {
     else throw new SerializationError(`Extension data is too big. Max (2^32)-1 bytes.`)
 
     // Writing actual custom extension type and data it encoded.
-    this.body.u8(type).batch(encoded)
+    this.body.u8(type).set(encoded)
 
     return true
   }

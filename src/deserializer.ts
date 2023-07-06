@@ -1,6 +1,6 @@
+import { bytesToUnicodeString } from './utils/unicode'
 import type { ExtensionCodec } from './codec'
 import { Extension, Format } from './formats'
-import { decodeUtf8 } from './utils/unicode'
 import { DataReader } from './io'
 
 export interface DeserializerOptions {
@@ -31,7 +31,7 @@ export class Deserializer<T = unknown> {
   }
 
   private decode(): unknown {
-    const type = this.reader.atBufferOffset()
+    const type = this.reader.current()
 
     // Format: positive fixint
     if (type <= 127) return type
@@ -114,14 +114,14 @@ export class Deserializer<T = unknown> {
       const length = this.reader.u16()
       const bytes = this.reader.range(length)
 
-      this.refs.set(ref, decodeUtf8(bytes))
+      this.refs.set(ref, bytesToUnicodeString(bytes))
 
       --size
     }
   }
 
   private readString(length: number): string {
-    return decodeUtf8(this.reader.range(length))
+    return bytesToUnicodeString(this.reader.range(length))
   }
 
   private readArray(length: number): unknown[] {

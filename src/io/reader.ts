@@ -1,47 +1,47 @@
 export class DataReader {
+  private pos: number
   private readonly view: DataView
-  private readonly buffer: Uint8Array
-  private bufferOffset: number
+  private readonly array: Uint8Array
 
   get offset() {
-    return this.bufferOffset
+    return this.pos
   }
 
-  constructor(data: Uint8Array) {
-    this.view = new DataView(data.buffer, data.byteOffset)
-    this.buffer = data
-    this.bufferOffset = 0
+  constructor(array: Uint8Array) {
+    this.view = new DataView(array.buffer, array.byteOffset)
+    this.array = array
+    this.pos = 0
   }
 
   u8(): number {
-    return this.view.getUint8(this.bufferOffset++)
+    return this.view.getUint8(this.pos++)
   }
 
   i8(): number {
-    return this.view.getInt8(this.bufferOffset++)
+    return this.view.getInt8(this.pos++)
   }
 
   u16(): number {
-    const res = this.view.getUint16(this.bufferOffset)
-    this.bufferOffset += 2
+    const res = this.view.getUint16(this.pos)
+    this.pos += 2
     return res
   }
 
   i16(): number {
-    const res = this.view.getInt16(this.bufferOffset)
-    this.bufferOffset += 2
+    const res = this.view.getInt16(this.pos)
+    this.pos += 2
     return res
   }
 
   u32(): number {
-    const res = this.view.getUint32(this.bufferOffset)
-    this.bufferOffset += 4
+    const res = this.view.getUint32(this.pos)
+    this.pos += 4
     return res
   }
 
   i32(): number {
-    const res = this.view.getInt32(this.bufferOffset)
-    this.bufferOffset += 4
+    const res = this.view.getInt32(this.pos)
+    this.pos += 4
     return res
   }
 
@@ -60,24 +60,24 @@ export class DataReader {
   }
 
   f32(): number {
-    const res = this.view.getFloat32(this.bufferOffset)
-    this.bufferOffset += 4
+    const res = this.view.getFloat32(this.pos)
+    this.pos += 4
     return res
   }
 
   f64(): number {
-    const res = this.view.getFloat64(this.bufferOffset)
-    this.bufferOffset += 8
+    const res = this.view.getFloat64(this.pos)
+    this.pos += 8
     return res
   }
 
-  atBufferOffset(): number {
-    return this.buffer[this.bufferOffset++]
+  current(): number {
+    return this.array[this.pos++]
   }
 
   range(length: number): Uint8Array {
-    const res = this.buffer.subarray(this.bufferOffset, this.bufferOffset + length)
-    this.bufferOffset += length
+    const res = this.array.subarray(this.pos, this.pos + length)
+    this.pos += length
     return res
   }
 }
