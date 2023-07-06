@@ -1,77 +1,65 @@
 const BUF_INITIAL_SIZE = 2048
 
 export class DataWriter {
-  private offset: number
+  private pos: number
   private view: DataView
-  private buffer: Uint8Array
+  private array: Uint8Array
 
   private readonly cache64 = new Map<number, [number, number]>()
 
   constructor() {
     this.view = new DataView(new ArrayBuffer(BUF_INITIAL_SIZE))
-    this.buffer = new Uint8Array(this.view.buffer)
-    this.offset = 0
-  }
-
-  bytes() {
-    return this.buffer.slice(0, this.offset)
+    this.array = new Uint8Array(this.view.buffer)
+    this.pos = 0
   }
 
   bytesRef() {
-    return this.buffer.subarray(0, this.offset)
+    return this.array.subarray(0, this.pos)
   }
 
   resetOffset() {
-    this.offset = 0
-  }
-
-  batch(values: ArrayLike<number>) {
-    const size = values.length
-    this.ensureSize(size)
-    this.buffer.set(values, this.offset)
-    this.offset += size
-    return this
+    this.pos = 0
   }
 
   u8(i: number) {
     this.ensureSize(1)
-    this.view.setUint8(this.offset, i)
-    this.offset++
+    this.view.setUint8(this.pos, i)
+    this.pos++
     return this
   }
 
   i8(i: number) {
     this.ensureSize(1)
-    this.view.setInt8(this.offset, i)
-    this.offset++
+    this.view.setInt8(this.pos, i)
+    this.pos++
     return this
   }
 
   u16(i: number) {
     this.ensureSize(2)
-    this.view.setUint16(this.offset, i)
-    this.offset += 2
+    this.view.setUint16(this.pos, i)
+    this.pos += 2
     return this
   }
 
   i16(i: number) {
     this.ensureSize(2)
-    this.view.setInt16(this.offset, i)
-    this.offset += 2
+    this.view.setInt16(this.pos, i)
+    this.pos += 2
     return this
   }
 
   u32(i: number) {
     this.ensureSize(4)
-    this.view.setUint32(this.offset, i)
-    this.offset += 4
+    this.view.setUint32(this.pos, i)
+    this.pos += 4
     return this
   }
 
   i32(i: number) {
     this.ensureSize(4)
-    this.view.setInt32(this.offset, i)
-    this.offset += 4
+    this.view.setInt32(this.pos, i)
+    this.pos += 4
     return this
   }
 
@@ -119,34 +107,38 @@ export class DataWriter {
 
   f32(f: number) {
     this.ensureSize(4)
-    this.view.setFloat32(this.offset, f)
-    this.offset += 4
+    this.view.setFloat32(this.pos, f)
+    this.pos += 4
     return this
   }
 
   f64(f: number) {
     this.ensureSize(8)
-    this.view.setFloat64(this.offset, f)
-    this.offset += 8
+    this.view.setFloat64(this.pos, f)
+    this.pos += 8
+    return this
+  }
+
+  set(values: ArrayLike<number>) {
+    const size = values.length
+    this.ensureSize(size)
+    this.array.set(values, this.pos)
+    this.pos += size
     return this
   }
 
   private ensureSize(size: number) {
-    const needed = this.offset + size
+    const needed = this.pos + size
 
     if (this.view.byteLength < needed) {
-      this.resize(needed * 2)
+      const buffer = new ArrayBuffer(needed * 2)
+      const view = new DataView(buffer)
+      const array = new Uint8Array(buffer)
+
+      array.set(this.array)
+
+      this.view = view
+      this.array = array
     }
-  }
-
-  private resize(size: number) {
-    const array = new ArrayBuffer(size)
-    const view = new DataView(array)
-    const buffer = new Uint8Array(array)
-
-    buffer.set(this.buffer)
-
-    this.view = view
-    this.buffer = buffer
   }
 }

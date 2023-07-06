@@ -7,7 +7,7 @@ export class UnicodeError extends Error {
 const StringCache = new Map<string, Uint8Array>()
 
 /** Encodes UTF-8 string into bytes. */
-export function encodeUtf8(string: string) {
+export function unicodeStringToBytes(string: string): Uint8Array {
   if (StringCache.has(string)) {
     return StringCache.get(string)
   }
@@ -60,7 +60,7 @@ export function encodeUtf8(string: string) {
 }
 
 /** Decodes bytes into UTF-8 string. */
-export function decodeUtf8(bytes: Uint8Array) {
+export function bytesToUnicodeString(bytes: Uint8Array): string {
   const length = bytes.length
   const codes: Array<number> = []
 
