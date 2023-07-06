@@ -209,12 +209,12 @@ export class Deserializer<T = unknown> {
   }
 
   private readRef(length: number): string {
-    let size: number
+    let ref: number
 
     // prettier-ignore
     switch (length) {
-      case 1: size = this.reader.u8(); break
-      case 2: size = this.reader.u16(); break
+      case 1: ref = this.reader.u8(); break
+      case 2: ref = this.reader.u16(); break
 
       default: {
         throw new DeserializationError(
@@ -224,7 +224,14 @@ export class Deserializer<T = unknown> {
       }
     }
 
-    return this.refs.get(size)!
+    if (this.refs.has(ref)) {
+      return this.refs.get(ref)
+    }
+
+    throw new DeserializationError(
+      `Unexpected reference ${ref} at ${this.reader.offset}. ` +
+        `Couldn't find it in the references map.`
+    )
   }
 
   private readTimestamp(size: number): Date {

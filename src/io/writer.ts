@@ -82,7 +82,7 @@ export class DataWriter {
     let lo: number
 
     if (this.cache64.has(i)) {
-      ;[hi, lo] = this.cache64.get(i)!
+      ;[hi, lo] = this.cache64.get(i)
     } else {
       hi = i / 4_294_967_296
       lo = i
@@ -103,7 +103,7 @@ export class DataWriter {
     let lo: number
 
     if (this.cache64.has(i)) {
-      ;[hi, lo] = this.cache64.get(i)!
+      ;[hi, lo] = this.cache64.get(i)
     } else {
       hi = Math.floor(i / 4_294_967_296)
       lo = i
