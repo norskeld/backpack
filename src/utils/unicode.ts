@@ -9,7 +9,7 @@ const StringCache = new Map<string, Uint8Array>()
 /** Encodes UTF-8 string into bytes. */
 export function encodeUtf8(string: string) {
   if (StringCache.has(string)) {
-    return StringCache.get(string)!
+    return StringCache.get(string)
   }
 
   const length = string.length

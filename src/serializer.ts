@@ -164,7 +164,7 @@ export class Serializer {
     let ref: number
 
     if (this.refs.has(key)) {
-      ref = this.refs.get(key)!
+      ref = this.refs.get(key)
     } else {
       ref = this.refs.size + 1
       this.refs.set(key, ref)
