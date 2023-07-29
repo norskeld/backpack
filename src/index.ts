@@ -1,24 +1,29 @@
+import { Deserializer, DeserializerOptions, DeserializationError } from './deserializer'
+import { Serializer, SerializerOptions, SerializationError } from './serializer'
 import { DataReader, DataWriter } from './io'
-import { Deserializer } from './deserializer'
-import { Serializer } from './serializer'
+import { Format, Extension } from './formats'
 
-const SharedBodyWriter = new DataWriter()
-const SharedHeaderWriter = new DataWriter()
+function serialize(data: unknown, options: SerializerOptions = {}): Uint8Array {
+  const serializer = new Serializer(options)
 
-const SharedSerializer = new Serializer({
-  writers: {
-    body: SharedBodyWriter,
-    header: SharedHeaderWriter
-  }
-})
-
-export function serialize(data: unknown): Uint8Array {
-  return SharedSerializer.serialize(data)
+  return serializer.serialize(data)
 }
 
-export function deserialize<T = unknown>(data: Uint8Array): T {
-  const reader = new DataReader(data)
-  const deserializer = new Deserializer<T>(reader)
+function deserialize<T = unknown>(data: Uint8Array, options: DeserializerOptions = {}): T {
+  const deserializer = new Deserializer<T>(data, options)
 
   return deserializer.deserialize()
+}
+
+export {
+  serialize,
+  deserialize,
+  Serializer,
+  Deserializer,
+  SerializationError,
+  DeserializationError,
+  DataReader,
+  DataWriter,
+  Format,
+  Extension
 }

@@ -1,6 +1,6 @@
-import { bytesToUnicodeString } from './utils/unicode'
 import type { ExtensionCodec } from './codec'
 import { Extension, Format } from './formats'
+import { UnicodeCodec } from './unicode'
 import { DataReader } from './io'
 
 export interface DeserializerOptions {
@@ -18,8 +18,8 @@ export class Deserializer<T = unknown> {
   private readonly extensionCodec?: ExtensionCodec
   private readonly refs: Map<number, string>
 
-  constructor(reader: DataReader, { extensionCodec }: DeserializerOptions = {}) {
-    this.reader = reader
+  constructor(data: Uint8Array, { extensionCodec }: DeserializerOptions = {}) {
+    this.reader = new DataReader(data)
     this.extensionCodec = extensionCodec
     this.refs = new Map()
   }
@@ -114,14 +114,14 @@ export class Deserializer<T = unknown> {
       const length = this.reader.u16()
       const bytes = this.reader.range(length)
 
-      this.refs.set(ref, bytesToUnicodeString(bytes))
+      this.refs.set(ref, UnicodeCodec.decode(bytes))
 
       --size
     }
   }
 
   private readString(length: number): string {
-    return bytesToUnicodeString(this.reader.range(length))
+    return UnicodeCodec.decode(this.reader.range(length))
   }
 
   private readArray(length: number): unknown[] {
