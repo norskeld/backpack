@@ -22,7 +22,8 @@ BackPack implements [MessagePack specification][messagepack-spec] and the follow
 - [x] [Timestamp extension][messagepack-timestamp-ext].
 - [x] [Map] and [Set] extensions.
 - [x] [Back-referencing](#back-referencing) extension.
-- [x] Does not depend on Node- or browser-specific APIs.
+
+BackPack does not depend on Node- or browser-specific APIs.
 
 ## Back-referencing
 
