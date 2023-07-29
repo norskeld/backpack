@@ -1,13 +1,9 @@
-import { unicodeStringToBytes } from './utils/unicode'
 import type { ExtensionCodec } from './codec'
 import { Extension, Format } from './formats'
+import { UnicodeCodec } from './unicode'
 import { DataWriter } from './io'
 
 export interface SerializerOptions {
-  writers: {
-    body: DataWriter
-    header: DataWriter
-  }
   extensionCodec?: ExtensionCodec
 }
 
@@ -23,9 +19,9 @@ export class Serializer {
   private readonly extensionCodec?: ExtensionCodec
   private readonly refs: Map<string, number>
 
-  constructor({ extensionCodec, writers }: SerializerOptions) {
-    this.body = writers.body
-    this.header = writers.header
+  constructor({ extensionCodec }: SerializerOptions) {
+    this.body = new DataWriter()
+    this.header = new DataWriter()
     this.extensionCodec = extensionCodec
     this.refs = new Map()
   }
@@ -61,7 +57,7 @@ export class Serializer {
     if (typeof data === 'string') return this.writeString(data)
 
     if (typeof data === 'object') {
-      // Try to apply extensions first in case `data` extends `Array`.
+      // Try to apply extensions first in case `data` extends `Array` or some other built-in object.
       if (this.writeExt(data)) return
 
       if (data instanceof Map) return this.writeMap(data)
@@ -80,7 +76,7 @@ export class Serializer {
     this.header.u16(this.refs.size)
 
     this.refs.forEach((ref, key) => {
-      const encoded = unicodeStringToBytes(key)
+      const encoded = UnicodeCodec.encode(key)
       this.header.u16(ref).u16(encoded.length).set(encoded)
     })
   }
@@ -109,9 +105,9 @@ export class Serializer {
       // Format: uint 8
       else if (n <= 255) this.body.u8(Format.Uint8).u8(n)
       // Format: uint 16
-      else if (n <= 65535) this.body.u8(Format.Uint16).u16(n)
+      else if (n <= 65_535) this.body.u8(Format.Uint16).u16(n)
       // Format: uint 32
-      else if (n <= 4294967295) this.body.u8(Format.Uint32).u32(n)
+      else if (n <= 4_294_967_295) this.body.u8(Format.Uint32).u32(n)
       // Format: uint 64
       else this.body.u8(Format.Uint64).u64(n)
     }
@@ -122,9 +118,9 @@ export class Serializer {
       // Format: int 8
       else if (n >= -128) this.body.u8(Format.Int8).i8(n)
       // Format: int 16
-      else if (n >= -32768) this.body.u8(Format.Int16).i16(n)
+      else if (n >= -32_768) this.body.u8(Format.Int16).i16(n)
       // Format: int 32
-      else if (n >= -2147483648) this.body.u8(Format.Int32).i32(n)
+      else if (n >= -2_147_483_648) this.body.u8(Format.Int32).i32(n)
       // Format: int 64
       else this.body.u8(Format.Int64).i64(n)
     }
@@ -142,7 +138,7 @@ export class Serializer {
     if (chars >= 2 && chars <= 16) {
       this.writeRef(s)
     } else {
-      const encoded = unicodeStringToBytes(s)
+      const encoded = UnicodeCodec.encode(s)
       const length = encoded.length
 
       // Format: fixstr (up to 31 bytes)
@@ -150,9 +146,9 @@ export class Serializer {
       // Format: str + length (u8)
       else if (length <= 255) this.body.u8(Format.Str8).u8(length)
       // Format: str + length (u16)
-      else if (length <= 65535) this.body.u8(Format.Str16).u16(length)
+      else if (length <= 65_535) this.body.u8(Format.Str16).u16(length)
       // Format: str + length (u32)
-      else if (length <= 4294967295) this.body.u8(Format.Str32).u32(length)
+      else if (length <= 4_294_967_295) this.body.u8(Format.Str32).u32(length)
       // Otherwise fail.
       else throw new SerializationError('String is too long. Max (2^32)-1 bytes.')
 
@@ -216,9 +212,9 @@ export class Serializer {
     // Format: bin + length (u8)
     if (length <= 255) this.body.u8(Format.Bin8).u8(length)
     // Format: bin + length (u16)
-    else if (length <= 65535) this.body.u8(Format.Bin16).u16(length)
+    else if (length <= 65_535) this.body.u8(Format.Bin16).u16(length)
     // Format: bin + length (u32)
-    else if (length <= 4294967295) this.body.u8(Format.Bin32).u32(length)
+    else if (length <= 4_294_967_295) this.body.u8(Format.Bin32).u32(length)
     // Otherwise fail.
     else throw new SerializationError('Binary data is too big. Max (2^32)-1 bytes.')
 
@@ -231,9 +227,9 @@ export class Serializer {
     // Format: fixarray (up to 15 elements)
     if (length <= 15) this.body.u8(Format.FixArray | length)
     // Format: array + length (u16)
-    else if (length <= 65535) this.body.u8(Format.Array16).u16(length)
+    else if (length <= 65_535) this.body.u8(Format.Array16).u16(length)
     // Format: array + length (u32)
-    else if (length <= 4294967295) this.body.u8(Format.Array32).u32(length)
+    else if (length <= 4_294_967_295) this.body.u8(Format.Array32).u32(length)
     // Otherwise fail.
     else throw new SerializationError(`Array is too big. Max (2^32)-1 elements.`)
 
@@ -250,9 +246,9 @@ export class Serializer {
     // Format: fixmap + size (up to 15 elements)
     if (size <= 15) this.body.u8(Format.FixMap | size)
     // Format: map + size (u16)
-    else if (size <= 65535) this.body.u8(Format.Map16).u16(size)
+    else if (size <= 65_535) this.body.u8(Format.Map16).u16(size)
     // Format: map + size (u32)
-    else if (size <= 4294967295) this.body.u8(Format.Map32).u32(size)
+    else if (size <= 4_294_967_295) this.body.u8(Format.Map32).u32(size)
     // Otherwise fail.
     else throw new SerializationError('Object is too big. Max (2^32)-1 entries.')
 
@@ -268,9 +264,9 @@ export class Serializer {
     // Format: fixext 1 + extension map + size (u8)
     if (size <= 255) this.body.u8(Format.FixExt1).i8(Extension.Map).u8(size)
     // Format: fixext 2 + extension map + size (u16)
-    else if (size <= 65535) this.body.u8(Format.FixExt2).i8(Extension.Map).u16(size)
+    else if (size <= 65_535) this.body.u8(Format.FixExt2).i8(Extension.Map).u16(size)
     // Format: fixext 4 + extension map + size (u32)
-    else if (size <= 4294967295) this.body.u8(Format.FixExt4).i8(Extension.Map).u32(size)
+    else if (size <= 4_294_967_295) this.body.u8(Format.FixExt4).i8(Extension.Map).u32(size)
     // Otherwise fail.
     else throw new SerializationError('Map is too big. Max (2^32)-1 entries.')
 
@@ -286,9 +282,9 @@ export class Serializer {
     // Format: fixext 1 + extension set + size (u8)
     if (size <= 255) this.body.u8(Format.FixExt1).i8(Extension.Set).u8(size)
     // Format: fixext 2 + extension set + size (u16)
-    else if (size <= 65535) this.body.u8(Format.FixExt2).i8(Extension.Set).u16(size)
+    else if (size <= 65_535) this.body.u8(Format.FixExt2).i8(Extension.Set).u16(size)
     // Format: fixext 4 + extension set + size (u32)
-    else if (size <= 4294967295) this.body.u8(Format.FixExt4).i8(Extension.Set).u32(size)
+    else if (size <= 4_294_967_295) this.body.u8(Format.FixExt4).i8(Extension.Set).u32(size)
     // Otherwise fail.
     else throw new SerializationError('Set is too big. Max (2^32)-1 entries.')
 
@@ -326,9 +322,9 @@ export class Serializer {
     // Format: ext 8 + size (u8)
     else if (size <= 255) this.body.u8(Format.Ext8).u8(size)
     // Format: ext 16 + size (u16)
-    else if (size <= 65535) this.body.u8(Format.Ext16).u16(size)
+    else if (size <= 65_535) this.body.u8(Format.Ext16).u16(size)
     // Format: ext 32 + size (u32)
-    else if (size <= 4294967295) this.body.u8(Format.Ext32).u32(size)
+    else if (size <= 4_294_967_295) this.body.u8(Format.Ext32).u32(size)
     // Otherwise fail.
     else throw new SerializationError(`Extension data is too big. Max (2^32)-1 bytes.`)
 
