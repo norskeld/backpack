@@ -27,7 +27,7 @@ BackPack does not depend on Node- or browser-specific APIs.
 
 ## Back-referencing
 
-It's a really simple extension that instructs serializer to replace short repeating strings and property names with numeric ids (references) and keep a map of references to strings in a message header. When deserializing, it does the opposite: reads a message header and then replaces references with associated strings.
+It's a really simple extension that instructs serializer to replace short repeating strings and property names with numeric ids (references) and keep a map of references to strings in a message header. When deserializing, it does the opposite: reads a message header and then replaces references with associated strings. This extensions allows to shave off 20-30% from payload size.
 
 ### Notes
 
@@ -54,7 +54,7 @@ const de = deserialize(se)
 
 ## Benchmarks
 
-Benchmarks for both size and performance can be found [here](./benchmarks/README.md).
+It's not fast, but not slow either, and performs mostly on par with the official JS implementation. Detailed benchmarks for both size and performance can be found [here](./benchmarks/README.md).
 
 ## Todo
 
