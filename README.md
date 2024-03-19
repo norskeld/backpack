@@ -27,13 +27,13 @@ BackPack does not depend on Node- or browser-specific APIs.
 
 ## Back-referencing
 
-It's a really simple extension that instructs serializer to replace short repeating strings and property names with numeric ids (references) and keep a map of references to strings in a message header. When deserializing, it does the opposite: reads a message header and then replaces references with associated strings. This extensions allows to shave off 20-30% from payload size.
+It's a really simple extension that instructs serializer to replace short repeating strings and property names with numeric ids (references) and keep a map of references to strings in the message header. When deserializing, it does the opposite: reads the message header and then replaces references with associated strings. This extension allows to shave off 20-30% from payload size.
 
 ### Notes
 
-- References implemented as extension formats, specifically **fixext1** and **fixext2**.
+- References are implemented as extension formats, specifically **fixext1** and **fixext2**.
 
-- There is a maximum number of references that can be safely stored: $2^{16} = 65536$. There is no point in storing 32 bit long references, since the overhead makes the whole approach non-viable.
+- There is a maximum number of references that can be safely stored: $2^{16} = 65536$. I don't think there is a point in storing 32 bit long references, since the overhead mostly makes the whole approach non-viable.
 
 - Right now all strings that are 2-16 ~~bytes~~ characters long get turned into references. Turning into references _only duplicated_ strings would make gains even more noticeable, but it's not an easy feat.
 
@@ -54,7 +54,7 @@ const de = deserialize(se)
 
 ## Benchmarks
 
-It's not fast, but not slow either, and performs mostly on par with the official JS implementation. Detailed benchmarks for both size and performance can be found [here](./benchmarks/README.md).
+It's not fast, but not slow either, and performs mostly on par with the official JS implementation while producing smaller outputs for the same inputs. Detailed benchmarks for both size and performance can be found [here](./benchmarks/README.md).
 
 ## Todo
 
@@ -69,6 +69,7 @@ This is mostly about public API:
   - [ ] Ignore `undefined` (default: `false`). If `false`, it will be encoded as `null`. Setting to `true` should theoretically allow one to implement a custom extension to encode `undefined` as a distinct format/type.
   - [ ] Throw on unknown data type (default: `true`). Setting to `false` will just ignore unknown data types and formats.
 - [ ] Rewrite extension system.
+- [ ] Add tests.
 
 ## License
 
