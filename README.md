@@ -14,9 +14,6 @@ MessagePack implementation with back-referencing extension.
 
 ## Features
 
-> [!WARNING]
-> This is mostly a learning project and—although it works—it is not ready to be used in production.
-
 BackPack implements [MessagePack specification][messagepack-spec] and the following extensions:
 
 - [x] [Timestamp extension][messagepack-timestamp-ext].
